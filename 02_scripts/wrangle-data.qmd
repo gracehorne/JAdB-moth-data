@@ -1,0 +1,141 @@
+---
+title: "wrangle-data"
+format: html
+editor: visual
+---
+
+### Load in data
+
+```{r load data}
+
+library(tidyverse)
+library(readxl)
+
+# define the function to load all .xlsx files in a folder and put them in a list
+load_xlsx_files <- function(directory) {
+  # get the list of all .xlsx files in the specified directory
+  file_list <- list.files(path = directory,
+                          pattern = "*.xlsx",
+                          full.names = TRUE)
+  # extract file names without directory and extension, and clean them
+  file_names <- str_replace_all(basename(file_list), 
+                                "\\.[xX][lL][sS][xX]$", "")
+  cleaned_names <- str_replace_all(file_names, "[^0-9]", "")
+  
+  # read each file and store the data in a list using purrr::map
+  data_list <- purrr::map(file_list, read_excel)
+  
+  # assign cleaned names to the list elements
+  names(data_list) <- cleaned_names
+  
+  # return the list of data frames
+  return(data_list)
+}
+
+# run function to load in data
+davis <- load_xlsx_files("../01_raw-data/davis/")
+stebs <- load_xlsx_files("../01_raw-data/stebs/")
+
+```
+
+### Wrangle data frames
+
+```{r wrangle data}
+
+df <- davis[[1]] %>% mutate_all(., as.character)
+
+# function to fill NA values with the most recent non-NA value in a row
+fill_row <- function(row) {
+  non_na_value <- NA
+  for (i in 1:length(row)) {
+    if (!is.na(row[i])) {
+      non_na_value <- row[i]
+    } else {
+      row[i] <- non_na_value
+    }
+  }
+  return(row)
+}
+
+# apply the function only to the first row
+df[1, ] <- fill_row(as.vector(df[1, ]))
+
+# make a row for the dates
+date_row <- df %>%
+  slice(c(1, 2)) %>%
+  mutate_all(~paste(., collapse = " "))
+
+# add it in
+df[1, ] <- date_row[1, ]
+
+# rename the columns as the first row 
+df <- df %>%
+  setNames(unlist(df[1, ])) 
+
+# remove the last 4 columns
+df <- df[, -c((ncol(df) - 3):ncol(df))]
+
+# remove columns 3 through 6, 8, and 9
+df <- df %>%
+  select(-3:-6, -8, -9)
+
+# define new column names for the species columns
+new_names <- c("hodges", "list", "genus_species")
+
+# small edits add up :)
+df <- df %>%
+  # rename the species columns
+  rename_with( ~ new_names, starts_with("Checklist")) %>%
+  # remove the first 2 rows using dplyr
+  slice(-(1:2)) %>%
+  # drop columns where "genus_species" is NA
+  drop_na(genus_species) %>%
+  # remove species count rows
+  filter(!genus_species == "Species:") %>%
+  # remove individual count rows
+  filter(!genus_species == "Individuals:") %>%
+  # remove periods from names
+  rename_with( ~ gsub("\\.", "", .), contains(".")) %>%
+  # combine the first two columns into a single column
+  mutate(hodges_list = ifelse(list == "", hodges, paste0(hodges, list))) %>%
+  # remove columns that were just used
+  select(-c(hodges, list)) %>%
+  # put hodges_list first
+  select(hodges_list, everything()) %>%
+  # pivot dates longer
+  pivot_longer(
+    cols = -c(hodges_list, genus_species),
+    names_to = "date",
+    values_to = "presence"
+  ) %>%
+  # remove NA rows (absenses)
+  mutate(presence = ifelse(is.na(presence), 
+                           0, ifelse(presence == 0, NA, 1))) %>%
+  filter(presence != 0)
+
+
+```
+
+### Match names to a backbone
+
+```{r}
+
+# get species names
+taxa <- unique(df$genus_species)
+
+# construct file name string
+filename <- paste0("../01_raw-data/davis-names/", deparse(substitute(taxa)), ".txt")
+
+# construct file output string
+fileoutput <- paste0("../01_raw-data/davis-names/", deparse(substitute(taxa)), "-output.csv")
+
+# write to a text file for use with names verifier
+writeLines(taxa, filename)
+
+# parse names
+system(paste("gnverifier", filename, ">", fileoutput))
+
+# read in matched names
+check_names <- read_csv(fileoutput)
+
+```
