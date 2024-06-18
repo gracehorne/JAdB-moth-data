@@ -42,8 +42,6 @@ stebs <- load_xlsx_files("../01_raw-data/stebs/")
 
 ```{r wrangle data}
 
-df <- davis[[1]] %>% mutate_all(., as.character)
-
 # function to fill NA values with the most recent non-NA value in a row
 fill_row <- function(row) {
   non_na_value <- NA
@@ -57,62 +55,93 @@ fill_row <- function(row) {
   return(row)
 }
 
-# apply the function only to the first row
-df[1, ] <- fill_row(as.vector(df[1, ]))
+# define the wrangle_data function
+wrangle_data <- function(df, year) {
+  # convert to df
+  df <- df %>% as.data.frame()
+  
+  # remove the first row if there is a running total
+  if (!is.na(df[3, 8]) && df[3, 8] == "Adults") {
+    new_names <- ifelse(is.na(df[1, ]), paste0("...", seq_along(df[1, ])), df[1, ])
+    new_names <- make.names(new_names, unique=TRUE)
+    df <- setNames(df, new_names)
+    df <- df %>% slice(-1)
+  }
+  
+  # if night/month rows are flip-flopped
+  if (df[1, 10] %in% c("N", "D")) {
+    df[1, ] <- colnames(df) # colnames to first row
+    df <- df %>% # remove day time data
+      select(-which(str_detect(df[1, ], "D")))  
+    df[1, ] <- df[1, ] %>% # ... to NA
+      str_replace(., "\\.\\.\\.", NA_character_) %>% as.list()
+  }
+    
+  # apply the function only to the first row
+  df[1, ] <- fill_row(as.vector(df[1, ]))
+  
+  # make a row for the dates
+  date_row <- df %>%
+    slice(c(1, 2)) %>%
+    mutate_all(~ paste(., collapse = " "))
+  
+  # add it in
+  df[1, ] <- date_row[1, ]
+  
+  # rename the columns as the first row
+  df <- df %>%
+    setNames(unlist(df[1, ]))
+  
+  # remove the last 4 columns
+  df <- df[, -c((ncol(df) - 3):ncol(df))]
+  
+  # remove columns 3 through 6, 8, and 9
+  df <- df %>%
+    select(-3:-6, -8, -9)
+  
+  # define new column names for the species columns
+  new_names <- c("hodges", "list", "verbatim_name")
+  
+  # small edits add up :)
+  df <- df %>%
+    # rename the species columns
+    rename_with(~ new_names, c(1, 2, 3)) %>%
+    # remove the first 2 rows using dplyr
+    slice(-(1:2)) %>%
+    # drop columns where "verbatim_name" is NA
+    drop_na(verbatim_name) %>%
+    # remove species count rows
+    filter(!verbatim_name == "Species:") %>%
+    # remove individual count rows
+    filter(!verbatim_name == "Individuals:") %>%
+    # remove periods from names
+    rename_with(~ gsub("\\.", "", .), contains(".")) %>%
+    # combine the first two columns into a single column
+    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, list))) %>%
+    # remove columns that were just used
+    select(-c(hodges, list)) %>%
+    # put hodges_list first
+    select(hodges_list, everything()) %>%
+    # pivot dates longer
+    pivot_longer(
+      cols = -c(hodges_list, verbatim_name),
+      names_to = "date",
+      values_to = "presence"
+    ) %>%
+    # remove NA rows (absences)
+    mutate(presence = ifelse(is.na(presence), 0, 1)) %>%
+    filter(presence != 0) %>%
+    # remove presence column
+    select(-presence) %>%
+    # fix dates
+    mutate(date = str_replace(date, "Sept", "Sep")) %>%
+    mutate(date = as.Date(paste(date, year), format = "%b %d %Y"))
+  
+  return(df)
+}
 
-# make a row for the dates
-date_row <- df %>%
-  slice(c(1, 2)) %>%
-  mutate_all(~paste(., collapse = " "))
-
-# add it in
-df[1, ] <- date_row[1, ]
-
-# rename the columns as the first row 
-df <- df %>%
-  setNames(unlist(df[1, ])) 
-
-# remove the last 4 columns
-df <- df[, -c((ncol(df) - 3):ncol(df))]
-
-# remove columns 3 through 6, 8, and 9
-df <- df %>%
-  select(-3:-6, -8, -9)
-
-# define new column names for the species columns
-new_names <- c("hodges", "list", "genus_species")
-
-# small edits add up :)
-df <- df %>%
-  # rename the species columns
-  rename_with( ~ new_names, starts_with("Checklist")) %>%
-  # remove the first 2 rows using dplyr
-  slice(-(1:2)) %>%
-  # drop columns where "genus_species" is NA
-  drop_na(genus_species) %>%
-  # remove species count rows
-  filter(!genus_species == "Species:") %>%
-  # remove individual count rows
-  filter(!genus_species == "Individuals:") %>%
-  # remove periods from names
-  rename_with( ~ gsub("\\.", "", .), contains(".")) %>%
-  # combine the first two columns into a single column
-  mutate(hodges_list = ifelse(list == "", hodges, paste0(hodges, list))) %>%
-  # remove columns that were just used
-  select(-c(hodges, list)) %>%
-  # put hodges_list first
-  select(hodges_list, everything()) %>%
-  # pivot dates longer
-  pivot_longer(
-    cols = -c(hodges_list, genus_species),
-    names_to = "date",
-    values_to = "presence"
-  ) %>%
-  # remove NA rows (absenses)
-  mutate(presence = ifelse(is.na(presence), 
-                           0, ifelse(presence == 0, NA, 1))) %>%
-  filter(presence != 0)
-
+# wrangle davis data
+davis <- imap(davis, wrangle_data)
 
 ```
 
@@ -121,7 +150,7 @@ df <- df %>%
 ```{r}
 
 # get species names
-taxa <- unique(df$genus_species)
+taxa <- unique(df$verbatim_name)
 
 # construct file name string
 filename <- paste0("../01_raw-data/davis-names/", deparse(substitute(taxa)), ".txt")
@@ -137,5 +166,16 @@ system(paste("gnverifier", filename, ">", fileoutput))
 
 # read in matched names
 check_names <- read_csv(fileoutput)
+
+# select columns, rename, and join with obs data
+test <- check_names %>%
+  select(SortScore, ScientificName, MatchedCanonical, TaxonId, DataSourceTitle) %>%
+  rename(sort_score = SortScore,
+         verbatim_name = ScientificName,
+         genus_species = MatchedCanonical,
+         taxon_id = TaxonId,
+         source = DataSourceTitle) %>%
+  mutate(manual_check = ifelse(sort_score < 9, 1, 0)) %>%
+  right_join(., df, join_by(verbatim_name))
 
 ```
