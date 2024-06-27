@@ -7,9 +7,14 @@ editor: visual
 ### Load in data
 
 ```{r load data}
+#| include: false
 
 library(tidyverse)
 library(readxl)
+library(sf)
+library(ClimateNAr)
+library(elevatr)
+library(withr)
 
 # define the function to load all .xlsx files in a folder and put them in a list
 load_xlsx_files <- function(directory) {
@@ -55,8 +60,8 @@ fill_row <- function(row) {
   return(row)
 }
 
-# define the wrangle_data function
-wrangle_data <- function(df, year) {
+# define the wrangle_data function for davis
+wrangle_data_davis <- function(df, year) {
   # convert to df
   df <- df %>% as.data.frame()
   
@@ -110,10 +115,14 @@ wrangle_data <- function(df, year) {
     slice(-(1:2)) %>%
     # drop columns where "verbatim_name" is NA
     drop_na(verbatim_name) %>%
-    # remove species count rows
-    filter(!verbatim_name == "Species:") %>%
-    # remove individual count rows
-    filter(!verbatim_name == "Individuals:") %>%
+    # remove extra text
+    filter(!verbatim_name == "Species:",
+           !verbatim_name == "species (total)"
+           !verbatim_name == "Individuals:",
+           !verbatim_name == "Off:",
+           !verbatim_name == "On:",
+           !verbatim_name == "Temp., deg. F.:"
+           ) %>%
     # remove periods from names
     rename_with(~ gsub("\\.", "", .), contains(".")) %>%
     # combine the first two columns into a single column
@@ -140,8 +149,103 @@ wrangle_data <- function(df, year) {
   return(df)
 }
 
-# wrangle davis data
-davis <- imap(davis, wrangle_data)
+df <- stebs[[10]]
+
+# define the wrangle_data function for stebs
+wrangle_data_stebs <- function(df, year) {
+  # convert to df
+  df <- df %>% as.data.frame()
+  
+  # remove blank columns
+df <- df %>%
+  select(where(~ {
+    if (is.numeric(.) || is.logical(.)) {
+      !all(is.na(.) | . == 0 | . == FALSE)
+    } else {
+      TRUE  # Keep non-numeric and non-logical columns
+    }
+  }))
+    
+  # apply the function only to the first row
+  df[1, ] <- fill_row(as.vector(df[1, ]))
+  
+  # make a row for the dates
+  date_row <- df %>%
+    slice(c(1, 2)) %>%
+    mutate_all(~ paste(., collapse = " "))
+  
+  # add it in
+  df[1, ] <- date_row[1, ]
+  
+  # remove daytime collection columns
+  df <- df %>%
+    select(-matches("D|NT|Trap|day"))
+  
+  # delete family column
+  if (df[3,3] == "ERIOCRANIIDAE" | df[4,3] == "ERIOCRANIIDAE") {
+    df <- df %>%
+    select(-3)   
+  }
+  
+  # remove columns 4 and 5
+  df <- df %>%
+    select(-4:-5)
+  
+  # remove the last 2 columns
+  df <- df[, -c((ncol(df) - 1):ncol(df))]
+  
+  # rename the columns as the first row
+  df <- df %>%
+    setNames(unlist(df[1, ]))
+  
+  # define new column names for the species columns
+  new_names <- c("hodges", "list", "verbatim_name")
+  
+  # small edits add up :)
+  df <- df %>%
+    # rename the species columns
+    rename_with(~ new_names, c(1, 2, 3)) %>%
+    # remove the first 2 rows using dplyr
+    slice(-(1:2)) %>%
+    # drop columns where "verbatim_name" is NA
+    drop_na(verbatim_name) %>%
+    # remove extra text
+    filter(!verbatim_name == "Species:",
+           !verbatim_name == "species (total)",
+           !verbatim_name == "Individuals:",
+           !verbatim_name == "Off:",
+           !verbatim_name == "On:",
+           !verbatim_name == "Temp., deg. F.:"
+           ) %>%
+    # remove periods from names
+    rename_with(~ gsub("\\.", "", .), contains(".")) %>%
+    # combine the first two columns into a single column
+    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, list))) %>%
+    # remove columns that were just used
+    select(-c(hodges, list)) %>%
+    # put hodges_list first
+    select(hodges_list, everything()) %>%
+    # pivot dates longer
+    pivot_longer(
+      cols = -c(hodges_list, verbatim_name),
+      names_to = "date",
+      values_to = "presence"
+    ) %>%
+    # remove NA rows (absences)
+    mutate(presence = ifelse(is.na(presence), 0, 1)) %>%
+    filter(presence != 0) %>%
+    # remove presence column
+    select(-presence) %>%
+    # fix dates
+    mutate(date = str_replace(date, "Sept", "Sep")) %>%
+   mutate(date = as.Date(paste(date, year), format = "%b %d %Y"))
+  
+  return(df)
+}
+
+# wrangle data
+davis_wrangled <- imap(davis, wrangle_data_davis) %>% list_rbind()
+stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>% list_rbind()
 
 ```
 
@@ -149,33 +253,145 @@ davis <- imap(davis, wrangle_data)
 
 ```{r}
 
-# get species names
-taxa <- unique(df$verbatim_name)
+# create a function to match names to a backbone
+get_names <- function(df) {
+  # get species names
+  taxa <- unique(df$verbatim_name)
+  
+  # construct file name string
+  filename <- paste0("../01_raw-data/davis-names/", 
+                     deparse(substitute(df)), ".txt")
+  
+  # construct file output string
+  fileoutput <- paste0("../01_raw-data/davis-names/", 
+                       deparse(substitute(df)), "-output.csv")
+  
+  # write to a text file for use with names verifier
+  writeLines(taxa, filename)
+  
+  # parse names
+  system(paste("gnverifier", filename, ">", fileoutput))
+  
+  # read in matched names
+  check_names <- read_csv(fileoutput)
+  
+  # select columns, rename, and join with obs data
+  names_df <- check_names %>%
+    select(SortScore, ScientificName, MatchedCanonical, 
+           TaxonId, DataSourceTitle) %>%
+    rename(sort_score = SortScore,
+           verbatim_name = ScientificName,
+           genus_species = MatchedCanonical,
+           taxon_id = TaxonId,
+           source = DataSourceTitle) %>%
+    # create a column for bad matches or no matches
+    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(verbatim_name, "\\?"), 1, 0)) %>%
+    right_join(., df, join_by(verbatim_name))
+  
+  return(names_df)
+}
 
-# construct file name string
-filename <- paste0("../01_raw-data/davis-names/", deparse(substitute(taxa)), ".txt")
+# run function on davis names
+davis_full <- get_names(davis_wrangled)
+stebs_full <- get_names(stebs_wrangled)
 
-# construct file output string
-fileoutput <- paste0("../01_raw-data/davis-names/", deparse(substitute(taxa)), "-output.csv")
+```
 
-# write to a text file for use with names verifier
-writeLines(taxa, filename)
+### Manual names check
 
-# parse names
-system(paste("gnverifier", filename, ">", fileoutput))
+```{r}
 
-# read in matched names
-check_names <- read_csv(fileoutput)
+# get list of unmatched names
+davis_unmatched <- davis_full %>%
+  filter(manual_check == 1) %>%
+  distinct(verbatim_name)
 
-# select columns, rename, and join with obs data
-test <- check_names %>%
-  select(SortScore, ScientificName, MatchedCanonical, TaxonId, DataSourceTitle) %>%
-  rename(sort_score = SortScore,
-         verbatim_name = ScientificName,
-         genus_species = MatchedCanonical,
-         taxon_id = TaxonId,
-         source = DataSourceTitle) %>%
-  mutate(manual_check = ifelse(sort_score < 9, 1, 0)) %>%
-  right_join(., df, join_by(verbatim_name))
+# get list of matched names
+davis_matched <- davis_full %>%
+  filter(manual_check == 0) %>%
+  distinct(verbatim_name)
+
+# write unmatched names .csv
+write_csv(davis_unmatched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/davis-names/davis_unmatched.csv")
+
+# write matched names .csv
+write_csv(davis_matched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/davis-names/davis_matched.csv")
+
+# get list of unmatched names
+stebs_unmatched <- stebs_full %>%
+  filter(manual_check == 1) %>%
+  distinct(verbatim_name)
+
+# get list of matched names
+stebs_matched <- stebs_full %>%
+  filter(manual_check == 0) %>%
+  distinct(verbatim_name)
+
+# write unmatched names .csv
+write_csv(stebs_unmatched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/stebs-names/stebs_unmatched.csv")
+
+# write matched names .csv
+write_csv(stebs_matched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/stebs-names/stebs_matched.csv")
+
+```
+
+### ClimateNA data
+
+```{r}
+
+# function to get elevation from a latitude and longitude
+get_elevation <- function(site, lon, lat) {
+  # create a single point
+  point <- st_point(c(lon, lat))
+  point_sf <- st_sfc(point, crs = 4326)
+  point_sf <- st_sf(geometry = point_sf)
+  
+  # get elevation
+  eldat <- get_elev_point(point_sf)
+  
+  # add columns for lat and lon and site plus rename elevation column
+  eldat$lon <- lon
+  eldat$lat <- lat
+  eldat$ID1 <- site
+  eldat$ID2 <- site
+  eldat$el <- eldat$elevation
+  
+  return(eldat)
+}
+
+# get data for davis and stebs
+davis_el <- get_elevation(site = "davis", lat = 38.5569, lon = -121.78)
+stebs_el <- get_elevation(site = "stebs", lat = 38.51, lon = -122.0972)
+
+# bind dataframes together
+site_info <- rbind(davis_el, stebs_el) %>% tibble() %>%
+  select(-elevation, -geometry, -elev_units) %>%
+  select(ID1, ID2, lat, lon, el)
+
+test <- ClimateNAr::ClimateNA_API2(
+  ClimateBC_NA = "NA",
+  inputFile = site_info,
+  period = "Year_2022.ann",
+  MSY = "M"
+)
+
+# empty list to be populated
+climate_data <- list()
+
+# year range
+years <- 1989:2023
+
+# Break the sequence into chunks of 5
+chunks <- split(years, ceiling(seq_along(years) / 5))
+
+# get climate data for stebs and davis for year range
+for (year in chunks[[1]]) {
+  climate_data[[paste(year)]] <- ClimateNAr::ClimateNA_API2(
+  ClimateBC_NA = "NA",
+  inputFile = site_info,
+  period = paste0("Year_", year, ".ann"),
+  MSY = "M"
+)
+}
 
 ```
