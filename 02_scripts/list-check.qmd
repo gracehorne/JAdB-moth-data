@@ -1,0 +1,59 @@
+---
+title: "list-check"
+format: html
+editor: visual
+---
+
+### Load files
+
+```{r load-files}
+
+# libraries
+library(tidyverse)
+library(readxl)
+
+# John's list
+list <- read_excel("../01_raw-data/CC Names.xlsx") %>%
+  drop_na(`STEBSUM NAME`) %>%
+  rename(name = `STEBSUM NAME`) %>%
+  select(name)
+
+# create a function to match names to a backbone
+get_names2 <- function(df) {
+  # get species names
+  taxa <- unique(df$name)
+  
+  # construct file name string
+  filename <- paste0("../01_raw-data/", "STEBSUM", "-names", ".txt")
+  
+  # construct file output string
+  fileoutput <- paste0("../01_raw-data/", "STEBSUM", "-names", "-output.csv")
+  
+  # write to a text file for use with names verifier
+  writeLines(taxa, filename)
+  
+  # parse names (prefer iNat (180) and GBIF (11))
+  system(paste("gnverifier", filename, ">", fileoutput, " -s '11, 180'"))
+  
+  # read in matched names
+  check_names <- read_csv(fileoutput)
+  
+  # select columns, rename, and join with obs data
+  names_df <- check_names %>%
+    select(SortScore, ScientificName, MatchedCanonical, 
+           TaxonId, DataSourceTitle) %>%
+    rename(sort_score = SortScore,
+           name = ScientificName,
+           genus_species = MatchedCanonical,
+           taxon_id = TaxonId,
+           source = DataSourceTitle) %>%
+    # create a column for bad matches or no matches
+    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(name, "\\?"), 1, 0)) %>%
+    right_join(., df, join_by(name))
+  
+  return(names_df)
+}
+
+comp_list <- get_names2(list)
+
+```
