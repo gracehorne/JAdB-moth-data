@@ -73,7 +73,7 @@ wrangle_data_davis <- function(df, year) {
   # remove the first row if there is a running total
   if (!is.na(df[3, 8]) && df[3, 8] == "Adults") {
     new_names <- ifelse(is.na(df[1, ]), paste0("...", seq_along(df[1, ])), df[1, ])
-    new_names <- make.names(new_names, unique=TRUE)
+    new_names <- make.names(new_names, unique = TRUE)
     df <- setNames(df, new_names)
     df <- df %>% slice(-1)
   }
@@ -82,11 +82,11 @@ wrangle_data_davis <- function(df, year) {
   if (df[1, 10] %in% c("N", "D")) {
     df[1, ] <- colnames(df) # colnames to first row
     df <- df %>% # remove day time data
-      select(-which(str_detect(df[1, ], "D")))  
+      select(-which(str_detect(df[1, ], "D")))
     df[1, ] <- df[1, ] %>% # ... to NA
       str_replace(., "\\.\\.\\.", NA_character_) %>% as.list()
   }
-    
+  
   # apply the function only to the first row
   df[1, ] <- fill_row(as.vector(df[1, ]))
   
@@ -121,17 +121,18 @@ wrangle_data_davis <- function(df, year) {
     # drop columns where "verbatim_name" is NA
     drop_na(verbatim_name) %>%
     # remove extra text
-    filter(!verbatim_name == "Species:",
-           !verbatim_name == "species (total)",
-           !verbatim_name == "Individuals:",
-           !verbatim_name == "Off:",
-           !verbatim_name == "On:",
-           !verbatim_name == "Temp., deg. F.:"
-           ) %>%
+    filter(
+      !verbatim_name == "Species:",
+      !verbatim_name == "species (total)",
+      !verbatim_name == "Individuals:",
+      !verbatim_name == "Off:",
+      !verbatim_name == "On:",
+      !verbatim_name == "Temp., deg. F.:"
+    ) %>%
     # remove periods from names
     rename_with(~ gsub("\\.", "", .), contains(".")) %>%
     # combine the first two columns into a single column
-    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, list))) %>%
+    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, ".", list))) %>%
     # remove columns that were just used
     select(-c(hodges, list)) %>%
     # put hodges_list first
@@ -223,7 +224,7 @@ df <- df %>%
     # remove periods from names
     rename_with(~ gsub("\\.", "", .), contains(".")) %>%
     # combine the first two columns into a single column
-    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, list))) %>%
+    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, ".", list))) %>%
     # remove columns that were just used
     select(-c(hodges, list)) %>%
     # put hodges_list first
@@ -247,12 +248,14 @@ df <- df %>%
 }
 
 # wrangle data
-davis_wrangled <- imap(davis, wrangle_data_davis) %>% list_rbind()
-stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>% list_rbind()
+davis_wrangled <- imap(davis, wrangle_data_davis) %>% 
+  list_rbind() %>% drop_na(date)
+stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>% 
+  list_rbind() %>% drop_na(date)
 
 ```
 
-### Link names via hodges number
+### Link names via Hodges number
 
 ```{r}
 
@@ -275,9 +278,9 @@ preferred_names <- read_excel("../01_raw-data/Verbatim Stebbins Names.xlsx")
 # concatenate columns 1 and 2 and removes blanks/extra columns
 # fill preferred_name column and then rename columns
 preferred_names <- preferred_names %>%
-  mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, `...2`))) %>%
+  mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, ".", `...2`))) %>%
   filter(!is.na(`STEBSUM NAME`)) %>% # remove rows where STEBSUM NAME is NA
-  select(-c(`...1`, `...2`, `...3`, `...7`, `...8`, `...9`)) %>%
+  select(-c(`...1`, `...2`, `...3`, `...7`, `...8`)) %>%
   mutate(preferred_name = ifelse(
     !is.na(`PREFERRED NAME`), `PREFERRED NAME`, `STEBSUM NAME`)) %>%
   select(hodges_list, preferred_name, -`VERBATIM NAME`, -`STEBSUM NAME`, -`PREFERRED NAME`)
@@ -290,21 +293,6 @@ preferred_names <- preferred_names %>%
 write_csv(preferred_names, "../01_raw-data/preferred-names-unprocessed.csv")
 
 ```
-
-### List of unmatched (STEBSUM)
-
-```{r}
-
-# find where stebs_full$verbatim_name is not in cc_names$stebsum_name
-obs_not_in_STEBSUM <- stebs_full %>%
-  anti_join(cc_names, by = c("verbatim_name" = "stebsum_name")) %>%
-  select(verbatim_name, date) %>%
-  distinct() %>%
-  as_tibble()
-
-```
-
-### 
 
 ### Match names to a backbone
 
@@ -651,165 +639,102 @@ davis_full <- davis_full %>%
   
 ```
 
-### ⚠️ Calculate adjusted FDPs
+### Calculate adjusted FDPs
 
 ```{r fdps}
 
-all_data <- all_data %>% # get ordinal date and flight min/max
-  mutate(ord_date = as.numeric(format(date, "%j"))) %>%
-  group_by(genus_species, dataset) %>%
-  mutate(flight_min = as.numeric(min(ord_date)), 
-         flight_max = as.numeric(max(ord_date))) %>%
-  ungroup()
-
-# create an object with all collection dates by dataset
-dates_by_dataset <- all_data %>% 
-  group_by(ord_date, dataset, year) %>%
-  summarize()
-
-# create an object with flight windows for each species
-flight_windows <- all_data %>%
-  group_by(genus_species, flight_min, flight_max, dataset) %>%
-  summarize()
-
-# davis only subset
-flight_windows_davis <- flight_windows %>%
-  filter(dataset == "davis")
-
-# davis only subset
-dates_by_dataset_davis <- dates_by_dataset %>%
-  filter(dataset == "davis")
-
-# find whether date is within flight window for each species
-for (i in 1:nrow(flight_windows_davis)) {
-  y <- as.vector(as.matrix(flight_windows_davis[i, 1]))
-  dates_by_dataset_davis <- dates_by_dataset_davis %>%
-    mutate(!!y := ifelse(
-      between(
-        ord_date,
-        flight_windows_davis$flight_min
-        [which(flight_windows_davis$genus_species == y)],
-        flight_windows_davis$flight_max
-        [which(flight_windows_davis$genus_species == y)]
-      ),
-      1,
-      0
-    ))
-}
-
-# make df with collection dates for davis
-species_collection_dates_davis <- dates_by_dataset_davis %>%
-  ungroup() %>%
-  select(!(c(ord_date, dataset))) %>%
-  group_by(year) %>%
-  summarise(across(everything(), ~ sum(., is.na(.), 0))) %>%
-  column_to_rownames("year") %>%
-  t() %>%
-  as.data.frame() %>%
-  rownames_to_column(var = "genus_species") %>%
-  mutate(dataset = "davis")
-
-# stebs only subset
-flight_windows_stebs <- flight_windows %>%
-  ungroup() %>%
-  filter(dataset == "stebs")
-
-# stebs only subset
-dates_by_dataset_stebs <- dates_by_dataset %>%
-  ungroup() %>%
-  filter(dataset == "stebs")
-
-# find whether date is within flight window for each species
-for (i in 1:nrow(flight_windows_stebs)) {
-  y <- as.vector(as.matrix(flight_windows_stebs[i, 1]))
-  dates_by_dataset_stebs <- dates_by_dataset_stebs %>%
-    mutate(!!y := ifelse(
-      between(
-        ord_date,
-        flight_windows_stebs$flight_min[which(flight_windows_stebs$genus_species == y)],
-        flight_windows_stebs$flight_max[which(flight_windows_stebs$genus_species == y)]
-      ),
-      1,
-      0
-    ))
-}
-
-# make df with collection dates for stebs
-species_collection_dates_stebs <- dates_by_dataset_stebs %>%
-  ungroup() %>%
-  select(!(c(ord_date, dataset))) %>%
-  group_by(year) %>%
-  summarise(across(everything(), ~ sum(., is.na(.), 0))) %>%
-  column_to_rownames("year") %>%
-  t() %>%
-  as.data.frame() %>%
-  rownames_to_column(var = "genus_species") %>%
-  mutate(dataset = "stebs")
-
-# join dfs together
-species_collection_dates <-
-full_join(species_collection_dates_stebs,
-species_collection_dates_davis)
-
-# pivot df longer
-species_collection_dates <- species_collection_dates %>%
-  pivot_longer(!c(genus_species, dataset),
-               names_to = "year",
-               values_to = "n_collection_dates_adj") %>%
-  mutate(year = as.numeric(year))
-
-all_data <- left_join(all_data,
-          species_collection_dates,
-          by = c("genus_species", "year", "dataset"))
-
-# collect metadata columns only
-species_metadata <- all_data %>%
-  distinct(genus_species, dataset, .keep_all = TRUE) %>%
-  select(
-    genus_species,
-    dataset,
-    genus,
-    family,
-    species_description,
-    unknown_id,
-    complete_record,
-    flight_min,
-    flight_max
+# write a function to calculate fractional day positives
+calculate_FDP <- function(data) {
+    # convert date to year and day of year (DOY)
+  data <- data %>%
+    mutate(year = year(date), DOY = yday(date))
+  
+  # calculate day_positives and collection_events
+  day_positives <- data %>%
+    group_by(genus_species, year) %>%
+    summarise(day_positives = n(), .groups = 'drop')
+  
+  collection_events <- data %>%
+    group_by(year) %>%
+    summarise(collection_events = n_distinct(date), .groups = 'drop')
+  
+  # calculate flight_min and flight_max
+  flight_window <- data %>%
+    group_by(genus_species) %>%
+    summarise(
+      flight_min = min(DOY),
+      flight_max = max(DOY),
+      .groups = 'drop'
+    )
+  
+  # merge flight window with original data
+  data <- data %>%
+    left_join(flight_window, by = "genus_species")
+  
+  # initialize dataframe for adj_collection_events
+  adj_collection_events <- data.frame(
+    genus_species = character(),
+    year = integer(),
+    adj_collection_events = integer(),
+    stringsAsFactors = FALSE
   )
+  
+  # calculate adj_collection_events using nested for loop with indexing
+  unique_species <- unique(data$genus_species) %>% na.omit()
+  unique_years <- unique(data$year) %>% na.omit()
+  
+  for (i in seq_along(unique_species)) {
+    species <- unique_species[i]
+    species_data <- data %>% filter(genus_species == species)
+    flight_min <- unique(species_data$flight_min)
+    flight_max <- unique(species_data$flight_max)
+    
+    for (j in seq_along(unique_years)) {
+      annum <- unique_years[j]
+      year_data <- data %>% filter(year == annum)
+      distinct_dates <- unique(year_data$date)
+      tally <- sum(yday(distinct_dates) >= flight_min &
+                     yday(distinct_dates) <= flight_max)
+      
+      adj_collection_events <- rbind(
+        adj_collection_events,
+        data.frame(
+          genus_species = species,
+          year = annum,
+          adj_collection_events = tally
+        )
+      )
+    }
+  }
+  
+  # combine all results
+  result <- day_positives %>%
+    left_join(collection_events, by = "year") %>%
+    mutate(day_negatives = collection_events - day_positives) %>%
+    left_join(flight_window, by = "genus_species") %>%
+    left_join(adj_collection_events, by = c("genus_species", "year"))
+  
+  data <- left_join(data, result)
+  
+  return(data)
+}
 
-all_data <- all_data %>% # get number of collection dates per year
-  group_by(year, dataset) %>% 
-  mutate(n_collection_dates_all = n_distinct(date)) %>%
-  ungroup()
+# list of dataframes to iterate over
+data_list <- list(
+  stebs = stebs_full,
+  davis = davis_full
+)
 
-# collect year, collection dates, species, and dataset
-year_metadata <- all_data %>% 
-  select(year, dataset, n_collection_dates_all) %>%
-  distinct() %>%
-  right_join(., species_collection_dates)
+# apply the function to each dataframe in the list
+results <- map(data_list, calculate_FDP)
 
-# get "day positives" per species per year
-species_positives <- all_data %>%
-  group_by(genus_species, year, dataset) %>% 
-  mutate(day_positives = n_distinct(date)) %>%
-  select(year, dataset, genus_species, day_positives) %>%
-  distinct()
-
-# join data frames together and fix day_positives = 0
-all_data_zeros <- year_metadata %>%
-  left_join(., species_positives) %>%
-  ungroup() %>%
-  mutate(day_positives = ifelse(
-    n_collection_dates_adj != 0 &
-      is.na(day_positives),
-    0,
-    day_positives
-  )) %>%
-  filter(!c(dataset == "stebs" & year == c(1998))) %>%
-  filter(!c(dataset == "davis" & year == c(1989:1997))) %>%
-  ungroup() %>%
-  left_join(., species_metadata, by = c("genus_species", "dataset")) %>%
-  mutate(day_negatives = n_collection_dates_adj - day_positives)
+# flatten the list by appending data frames and create a new column based on list names
+full_data <- bind_rows(
+  map2(results, names(results), ~ {
+    .x %>%
+      mutate(dataset = .y)
+  })
+)
 
 ```
 
@@ -826,9 +751,19 @@ fire_predictor <- read_csv("../03_processed-data/predictors/fire_predictor.csv")
 trail_predictor <- read_csv("../03_processed-data/predictors/trail_predictor.csv")
 
 # join fire and trail predictors to stebs data
-stebs_full <- stebs_full %>%
+# filter for dataset == "stebs"
+stebs_data <- full_data %>%
+  filter(dataset == "stebs")
+
+# perform the joins only for the filtered data
+stebs_data <- stebs_data %>%
   left_join(fire_predictor) %>%
-  left_join(trail_predictor)
+  left_join(trail_predictor)  
+
+# combine with the original data, keeping the rows where dataset != "stebs"
+full_data <- full_data %>%
+  filter(dataset != "stebs") %>%
+  bind_rows(stebs_data)
 
 # load pest data
 pest_predictor <- read_csv("../03_processed-data/predictors/pest_status.csv")
@@ -840,11 +775,8 @@ long_pest_predictor <- pest_predictor %>%
 # get unique pest species
 unique_pests <- unique(long_pest_predictor[[2]])  # The first column name might vary
 
-# add pest status to full dfs
-davis_full <- davis_full %>%
-  mutate(any_pest = ifelse(genus_species %in% unique_pests & !is.na(genus_species), 1, 0))
-
-stebs_full <- stebs_full %>%
+# add pest status to full df
+full_data  <- full_data %>%
   mutate(any_pest = ifelse(genus_species %in% unique_pests & !is.na(genus_species), 1, 0))
 
 ```
