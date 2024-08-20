@@ -255,42 +255,42 @@ stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>%
 
 ```
 
-### Link names via Hodges number
+### 🚫 Link names via Hodges number
 
 ```{r}
 
 # reshape the data frame
-old_names <- stebs_wrangled %>%
-  filter(!is.na(hodges_list)) %>%  # remove rows where hodges_list is NA
-  group_by(hodges_list) %>%
-  distinct(verbatim_name) %>%
-  mutate(occurrence = row_number()) %>%
-  pivot_wider(
-    id_cols = hodges_list,
-    names_from = occurrence,
-    values_from = verbatim_name,
-    names_prefix = "old_name"
-  )
-
-# bring in John's list of preferred names
-preferred_names <- read_excel("../01_raw-data/Verbatim Stebbins Names.xlsx")
-
-# concatenate columns 1 and 2 and removes blanks/extra columns
-# fill preferred_name column and then rename columns
-preferred_names <- preferred_names %>%
-  mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, ".", `...2`))) %>%
-  filter(!is.na(`STEBSUM NAME`)) %>% # remove rows where STEBSUM NAME is NA
-  select(-c(`...1`, `...2`, `...3`, `...7`, `...8`)) %>%
-  mutate(preferred_name = ifelse(
-    !is.na(`PREFERRED NAME`), `PREFERRED NAME`, `STEBSUM NAME`)) %>%
-  select(hodges_list, preferred_name, -`VERBATIM NAME`, -`STEBSUM NAME`, -`PREFERRED NAME`)
-  
-# add preferred name column to old names
-preferred_names <- preferred_names %>%
-  right_join(old_names, by = "hodges_list")
-
-# write CSV so I can manually check it
-write_csv(preferred_names, "../01_raw-data/preferred-names-unprocessed.csv")
+# old_names <- stebs_wrangled %>%
+#   filter(!is.na(hodges_list)) %>%  # remove rows where hodges_list is NA
+#   group_by(hodges_list) %>%
+#   distinct(verbatim_name) %>%
+#   mutate(occurrence = row_number()) %>%
+#   pivot_wider(
+#     id_cols = hodges_list,
+#     names_from = occurrence,
+#     values_from = verbatim_name,
+#     names_prefix = "old_name"
+#   )
+# 
+# # bring in John's list of preferred names
+# preferred_names <- read_excel("../01_raw-data/Verbatim Stebbins Names.xlsx")
+# 
+# # concatenate columns 1 and 2 and removes blanks/extra columns
+# # fill preferred_name column and then rename columns
+# preferred_names <- preferred_names %>%
+#   mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, ".", `...2`))) %>%
+#   filter(!is.na(`STEBSUM NAME`)) %>% # remove rows where STEBSUM NAME is NA
+#   select(-c(`...1`, `...2`, `...3`, `...7`, `...8`)) %>%
+#   mutate(preferred_name = ifelse(
+#     !is.na(`PREFERRED NAME`), `PREFERRED NAME`, `STEBSUM NAME`)) %>%
+#   select(hodges_list, preferred_name, -`VERBATIM NAME`, -`STEBSUM NAME`, -`PREFERRED NAME`)
+#   
+# # add preferred name column to old names
+# preferred_names <- preferred_names %>%
+#   right_join(old_names, by = "hodges_list")
+# 
+# # write CSV so I can manually check it
+# write_csv(preferred_names, "../01_raw-data/preferred-names-unprocessed.csv")
 
 ```
 
@@ -412,6 +412,86 @@ stebs_full <- left_join(stebs_full, checklist)
 ### ⚠️ Add John's confidence levels
 
 ```{r john-species-confidence}
+
+
+
+```
+
+### Formatted preferred names
+
+Double check that every observation has a preferred name.
+
+```{r}
+
+# load in list of names
+preferred_names <- read_excel("../01_raw-data/Formatted Names.xlsx")
+
+preferred_names <- preferred_names %>%
+  # remove the 1st row
+  slice(-1) %>%
+  # remove the 4th column
+  select(-4) %>%
+  # combine the first and second columns
+  mutate(hodges_list = ifelse(!is.na(`...2`), 
+                              paste0(Hodges, ".", `...2`), 
+                              Hodges)) %>%
+  # remove columns used to make hodges_list
+  select(hodges_list, everything(), -Hodges, -`...2`)
+
+# vector of new names
+col_names <- c(
+  "hodges_list",
+  "p_no",
+  "verbatim_name",
+  "preferred_name",
+  "stebsum_name",
+  "old_name1",
+  "old_name2",
+  "old_name3",
+  "old_name4",
+  "old_name5" ,
+  "old_name6",
+  "comments"
+)
+
+# rename
+names(preferred_names) <- col_names
+
+# get unique names from stebs data
+unique_stebs <- stebs_wrangled %>% 
+  select(verbatim_name) %>% 
+  distinct()
+
+# make a database with final columns and a list of old names
+preferred_names_db <- preferred_names %>%
+  select(hodges_list, p_no, preferred_name, comments) %>%
+  mutate(old_names = map(1:nrow(.), function(i) {
+    c(
+      preferred_names$preferred_name[i],
+      preferred_names$verbatim_name[i],
+      preferred_names$stebsum_name[i],
+      preferred_names$old_name1[i],
+      preferred_names$old_name2[i],
+      preferred_names$old_name3[i],
+      preferred_names$old_name4[i],
+      preferred_names$old_name5[i],
+      preferred_names$old_name6[i]
+    ) %>%
+      discard(is.na)
+  })) %>% distinct()
+
+# unnest the old_names column so that each old name is in its own row
+df_long <- preferred_names_db %>%
+  unnest(old_names)
+
+# join this long dataframe with the unique_names dataframe on old_name
+unique_stebs_with_preferred <- unique_stebs %>%
+  left_join(df_long, by = c("verbatim_name" = "old_names")) %>%
+  rename("database_name" = "verbatim_name") %>%
+  distinct() %>%
+  select(hodges_list, p_no, everything())
+
+write_csv(unique_stebs_with_preferred, "/Users/gracehorne/Downloads/database-matches.csv")
 
 ```
 
