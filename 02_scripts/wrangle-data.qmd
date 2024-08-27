@@ -255,165 +255,44 @@ stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>%
 
 ```
 
-### 🚫 Link names via Hodges number
+### ⏭️ ~~Link names via Hodges number~~
 
 ```{r}
+#| eval: false
+#| include: false
 
 # reshape the data frame
-# old_names <- stebs_wrangled %>%
-#   filter(!is.na(hodges_list)) %>%  # remove rows where hodges_list is NA
-#   group_by(hodges_list) %>%
-#   distinct(verbatim_name) %>%
-#   mutate(occurrence = row_number()) %>%
-#   pivot_wider(
-#     id_cols = hodges_list,
-#     names_from = occurrence,
-#     values_from = verbatim_name,
-#     names_prefix = "old_name"
-#   )
-# 
-# # bring in John's list of preferred names
-# preferred_names <- read_excel("../01_raw-data/Verbatim Stebbins Names.xlsx")
-# 
-# # concatenate columns 1 and 2 and removes blanks/extra columns
-# # fill preferred_name column and then rename columns
-# preferred_names <- preferred_names %>%
-#   mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, ".", `...2`))) %>%
-#   filter(!is.na(`STEBSUM NAME`)) %>% # remove rows where STEBSUM NAME is NA
-#   select(-c(`...1`, `...2`, `...3`, `...7`, `...8`)) %>%
-#   mutate(preferred_name = ifelse(
-#     !is.na(`PREFERRED NAME`), `PREFERRED NAME`, `STEBSUM NAME`)) %>%
-#   select(hodges_list, preferred_name, -`VERBATIM NAME`, -`STEBSUM NAME`, -`PREFERRED NAME`)
-#   
-# # add preferred name column to old names
-# preferred_names <- preferred_names %>%
-#   right_join(old_names, by = "hodges_list")
-# 
-# # write CSV so I can manually check it
-# write_csv(preferred_names, "../01_raw-data/preferred-names-unprocessed.csv")
+old_names <- stebs_wrangled %>%
+  filter(!is.na(hodges_list)) %>%  # remove rows where hodges_list is NA
+  group_by(hodges_list) %>%
+  distinct(verbatim_name) %>%
+  mutate(occurrence = row_number()) %>%
+  pivot_wider(
+    id_cols = hodges_list,
+    names_from = occurrence,
+    values_from = verbatim_name,
+    names_prefix = "old_name"
+  )
 
-```
+# bring in John's list of preferred names
+preferred_names <- read_excel("../01_raw-data/Verbatim Stebbins Names.xlsx")
 
-### Match names to a backbone
+# concatenate columns 1 and 2 and removes blanks/extra columns
+# fill preferred_name column and then rename columns
+preferred_names <- preferred_names %>%
+  mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, ".", `...2`))) %>%
+  filter(!is.na(`STEBSUM NAME`)) %>% # remove rows where STEBSUM NAME is NA
+  select(-c(`...1`, `...2`, `...3`, `...7`, `...8`)) %>%
+  mutate(preferred_name = ifelse(
+    !is.na(`PREFERRED NAME`), `PREFERRED NAME`, `STEBSUM NAME`)) %>%
+  select(hodges_list, preferred_name, -`VERBATIM NAME`, -`STEBSUM NAME`, -`PREFERRED NAME`)
 
-First, I made a list of names, then I exported that list so that I could run a command line script to process the data and tie it back to the GBIF and iNat taxonomy backbones. Then, I created a column based on the sort scores so that I am able to identify which "species" need to be manually checked.
+# add preferred name column to old names
+preferred_names <- preferred_names %>%
+  right_join(old_names, by = "hodges_list")
 
-```{r name-match}
-
-# create a function to match names to a backbone
-get_names <- function(df, site) {
-  # get species names
-  taxa <- unique(df$verbatim_name)
-  
-  # construct file name string
-  filename <- paste0("../01_raw-data/", site, "-names/", 
-                     deparse(substitute(df)), ".txt")
-  
-  # construct file output string
-  fileoutput <- paste0("../01_raw-data/", site, "-names/", 
-                       deparse(substitute(df)), "-output.csv")
-  
-  # write to a text file for use with names verifier
-  writeLines(taxa, filename)
-  
-  # parse names (prefer iNat (180) and GBIF (11))
-  system(paste("gnverifier", filename, ">", fileoutput, " -s '11, 180'"))
-  
-  # read in matched names
-  check_names <- read_csv(fileoutput)
-  
-  # select columns, rename, and join with obs data
-  names_df <- check_names %>%
-    select(SortScore, ScientificName, MatchedCanonical, 
-           TaxonId, DataSourceTitle) %>%
-    rename(sort_score = SortScore,
-           verbatim_name = ScientificName,
-           genus_species = MatchedCanonical,
-           taxon_id = TaxonId,
-           source = DataSourceTitle) %>%
-    # create a column for bad matches or no matches
-    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(verbatim_name, "\\?"), 1, 0)) %>%
-    right_join(., df, join_by(verbatim_name))
-  
-  return(names_df)
-}
-
-# run function on davis names
-davis_full <- get_names(davis_wrangled, "davis")
-stebs_full <- get_names(stebs_wrangled, "stebs")
-
-```
-
-### Add checklist number
-
-I joined the Moth Photographer's group checklist numbers to John's data.
-
-```{r pohl-checklist}
-
-# load in the checklist data
-checklist <- read_excel("../01_raw-data/MPG-Taxa_20240311.xlsx") %>%
-  rename(
-    p_no = `P No`,
-    genus_species = Genus_Species,
-    common_name = `Common Name`,
-    family = Family,
-    genus = Genus,
-    species = Species,
-    synonymy = Synonymy
-  ) %>%
-select(p_no, MONA, genus_species, common_name, 
-       family, genus, species, synonymy)
-
-# update the taxonomy
-
-# if genus_species from stebs_full is in the synonymy column (but not
-# necesarily exactly equal), then replace genus_species from the
-# data frame stebs_full with genus_species from the df checklist
-stebs_full <- stebs_full %>%
-  mutate(genus_species = case_when(
-    sapply(genus_species, function(gs) {
-      # Split the name into its components
-      parts <- str_split(gs, " ")[[1]]
-      # Create patterns for both binomial and trinomial matches
-      patterns <- c(paste0("\\b", paste(parts[1:2], collapse = " "), "\\b"),
-                    if (length(parts) > 2)
-                      paste0("\\b", paste(parts[1:3], collapse = " "), "\\b")
-                    else
-                      NULL)
-      # Check if any pattern matches
-      any(sapply(patterns, function(pat)
-        any(str_detect(
-          checklist$synonymy, pat
-        ))))
-    }) ~
-      sapply(genus_species, function(gs) {
-        parts <- str_split(gs, " ")[[1]]
-        patterns <- c(paste0("\\b", paste(parts[1:2], collapse = " "), "\\b"),
-                      if (length(parts) > 2)
-                        paste0("\\b", paste(parts[1:3], collapse = " "), "\\b")
-                      else
-                        NULL)
-        for (pat in patterns) {
-          match_index <- which(str_detect(checklist$synonymy, pat))
-          if (length(match_index) > 0)
-            return(checklist$genus_species[match_index[1]])
-        }
-        return(gs)
-      }),
-    TRUE ~ genus_species
-  ))
-
-# join the datasets together
-davis_full <- left_join(davis_full, checklist)
-stebs_full <- left_join(stebs_full, checklist)
-
-```
-
-### ⚠️ Add John's confidence levels
-
-```{r john-species-confidence}
-
-
+# write CSV so I can manually check it
+write_csv(preferred_names, "../01_raw-data/preferred-names-unprocessed.csv")
 
 ```
 
@@ -491,15 +370,75 @@ unique_stebs_with_preferred <- unique_stebs %>%
   distinct() %>%
   select(hodges_list, p_no, everything())
 
-write_csv(unique_stebs_with_preferred, "/Users/gracehorne/Downloads/database-matches.csv")
+# write_csv(unique_stebs_with_preferred, "/Users/gracehorne/Downloads/database-matches.csv")
 
 ```
 
-### Manual names check
+### ⚠️ Add John's confidence levels
+
+```{r john-species-confidence}
+
+
+
+```
+
+### Match names to a backbone
+
+First, I made a list of names, then I exported that list so that I could run a command line script to process the data and tie it back to the GBIF and iNat taxonomy backbones. Then, I created a column based on the sort scores so that I am able to identify which "species" need to be manually checked.
+
+```{r name-match}
+
+# create a function to match names to a backbone
+get_names <- function(df, site) {
+  # get species names
+  taxa <- unique(df$verbatim_name)
+  
+  # construct file name string
+  filename <- paste0("../01_raw-data/", site, "-names/", 
+                     deparse(substitute(df)), ".txt")
+  
+  # construct file output string
+  fileoutput <- paste0("../01_raw-data/", site, "-names/", 
+                       deparse(substitute(df)), "-output.csv")
+  
+  # write to a text file for use with names verifier
+  writeLines(taxa, filename)
+  
+  # parse names (prefer iNat (180) and GBIF (11))
+  system(paste("gnverifier", filename, ">", fileoutput, " -s '11, 180'"))
+  
+  # read in matched names
+  check_names <- read_csv(fileoutput)
+  
+  # select columns, rename, and join with obs data
+  names_df <- check_names %>%
+    select(SortScore, ScientificName, MatchedCanonical, 
+           TaxonId, DataSourceTitle) %>%
+    rename(sort_score = SortScore,
+           verbatim_name = ScientificName,
+           genus_species = MatchedCanonical,
+           taxon_id = TaxonId,
+           source = DataSourceTitle) %>%
+    # create a column for bad matches or no matches
+    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(verbatim_name, "\\?"), 1, 0)) %>%
+    right_join(., df, join_by(verbatim_name))
+  
+  return(names_df)
+}
+
+# run function on davis names
+davis_full <- get_names(davis_wrangled, "davis")
+stebs_full <- get_names(stebs_wrangled, "stebs")
+
+```
+
+### ⏭️ ~~Manual names check~~
 
 This chunk provides exported lists of matched and unmatched names to be gone through by John and Grace.
 
 ```{r name-check}
+#| eval: false
+#| include: false
 
 # get list of unmatched names
 davis_unmatched <- davis_full %>%
@@ -535,12 +474,79 @@ write_csv(stebs_matched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke
 
 ```
 
-### ClimateNA data
+### Add checklist number
+
+I joined the Moth Photographer's group checklist numbers to John's data.
+
+```{r pohl-checklist}
+#| warning: false
+
+# load in the checklist data
+checklist <- read_excel("../01_raw-data/MPG-Taxa_20240311.xlsx") %>%
+  rename(
+    p_no = `P No`,
+    genus_species = Genus_Species,
+    common_name = `Common Name`,
+    family = Family,
+    genus = Genus,
+    species = Species,
+    synonymy = Synonymy
+  ) %>%
+select(p_no, MONA, genus_species, common_name, 
+       family, genus, species, synonymy)
+
+# update the taxonomy
+
+# if genus_species from stebs_full is in the synonymy column (but not
+# necesarily exactly equal), then replace genus_species from the
+# data frame stebs_full with genus_species from the df checklist
+stebs_full <- stebs_full %>%
+  mutate(genus_species = case_when(
+    sapply(genus_species, function(gs) {
+      # Split the name into its components
+      parts <- str_split(gs, " ")[[1]]
+      # Create patterns for both binomial and trinomial matches
+      patterns <- c(paste0("\\b", paste(parts[1:2], collapse = " "), "\\b"),
+                    if (length(parts) > 2)
+                      paste0("\\b", paste(parts[1:3], collapse = " "), "\\b")
+                    else
+                      NULL)
+      # Check if any pattern matches
+      any(sapply(patterns, function(pat)
+        any(str_detect(
+          checklist$synonymy, pat
+        ))))
+    }) ~
+      sapply(genus_species, function(gs) {
+        parts <- str_split(gs, " ")[[1]]
+        patterns <- c(paste0("\\b", paste(parts[1:2], collapse = " "), "\\b"),
+                      if (length(parts) > 2)
+                        paste0("\\b", paste(parts[1:3], collapse = " "), "\\b")
+                      else
+                        NULL)
+        for (pat in patterns) {
+          match_index <- which(str_detect(checklist$synonymy, pat))
+          if (length(match_index) > 0)
+            return(checklist$genus_species[match_index[1]])
+        }
+        return(gs)
+      }),
+    TRUE ~ genus_species
+  ))
+
+# join the datasets together
+davis_full <- left_join(davis_full, checklist)
+stebs_full <- left_join(stebs_full, checklist)
+
+```
+
+### ⏭️ ~~ClimateNA data~~
 
 Here, I downloaded the data from ClimateNA programmatically. Because of the limits on queries one can ask of the database, I've opted to go with Terraclimate instead (below), for which no such limitations exist.
 
 ```{r climateNA}
 #| eval: false
+#| include: false
 
 # # function to get elevation from a latitude and longitude
 # get_elevation <- function(site, lon, lat) {
