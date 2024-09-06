@@ -127,7 +127,9 @@ wrangle_data_davis <- function(df, year) {
       !verbatim_name == "Individuals:",
       !verbatim_name == "Off:",
       !verbatim_name == "On:",
-      !verbatim_name == "Temp., deg. F.:"
+      !verbatim_name == "Temp., deg. F.:",
+      !verbatim_name == "Hi Temp",
+      !verbatim_name == "Lo Temp"
     ) %>%
     # remove periods from names
     rename_with(~ gsub("\\.", "", .), contains(".")) %>%
@@ -219,7 +221,9 @@ df <- df %>%
            !verbatim_name == "Individuals:",
            !verbatim_name == "Off:",
            !verbatim_name == "On:",
-           !verbatim_name == "Temp., deg. F.:"
+           !verbatim_name == "Temp., deg. F.:",
+      !verbatim_name == "Hi Temp",
+      !verbatim_name == "Lo Temp"
            ) %>%
     # remove periods from names
     rename_with(~ gsub("\\.", "", .), contains(".")) %>%
@@ -255,47 +259,6 @@ stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>%
 
 ```
 
-### ⏭️ ~~Link names via Hodges number~~
-
-```{r}
-#| eval: false
-#| include: false
-
-# reshape the data frame
-old_names <- stebs_wrangled %>%
-  filter(!is.na(hodges_list)) %>%  # remove rows where hodges_list is NA
-  group_by(hodges_list) %>%
-  distinct(verbatim_name) %>%
-  mutate(occurrence = row_number()) %>%
-  pivot_wider(
-    id_cols = hodges_list,
-    names_from = occurrence,
-    values_from = verbatim_name,
-    names_prefix = "old_name"
-  )
-
-# bring in John's list of preferred names
-preferred_names <- read_excel("../01_raw-data/Verbatim Stebbins Names.xlsx")
-
-# concatenate columns 1 and 2 and removes blanks/extra columns
-# fill preferred_name column and then rename columns
-preferred_names <- preferred_names %>%
-  mutate(hodges_list = ifelse(is.na(`...2`), `...1`, paste0(`...1`, ".", `...2`))) %>%
-  filter(!is.na(`STEBSUM NAME`)) %>% # remove rows where STEBSUM NAME is NA
-  select(-c(`...1`, `...2`, `...3`, `...7`, `...8`)) %>%
-  mutate(preferred_name = ifelse(
-    !is.na(`PREFERRED NAME`), `PREFERRED NAME`, `STEBSUM NAME`)) %>%
-  select(hodges_list, preferred_name, -`VERBATIM NAME`, -`STEBSUM NAME`, -`PREFERRED NAME`)
-
-# add preferred name column to old names
-preferred_names <- preferred_names %>%
-  right_join(old_names, by = "hodges_list")
-
-# write CSV so I can manually check it
-write_csv(preferred_names, "../01_raw-data/preferred-names-unprocessed.csv")
-
-```
-
 ### Formatted preferred names
 
 Double check that every observation has a preferred name.
@@ -303,13 +266,11 @@ Double check that every observation has a preferred name.
 ```{r}
 
 # load in list of names
-preferred_names <- read_excel("../01_raw-data/Formatted Names.xlsx")
+preferred_names <- read_excel("../01_raw-data/formatted-names-GMH-v2.xlsx")
 
 preferred_names <- preferred_names %>%
   # remove the 1st row
   slice(-1) %>%
-  # remove the 4th column
-  select(-4) %>%
   # combine the first and second columns
   mutate(hodges_list = ifelse(!is.na(`...2`), 
                               paste0(Hodges, ".", `...2`), 
@@ -330,6 +291,7 @@ col_names <- c(
   "old_name4",
   "old_name5" ,
   "old_name6",
+  "old_name7",
   "comments"
 )
 
@@ -371,6 +333,21 @@ unique_stebs_with_preferred <- unique_stebs %>%
   select(hodges_list, p_no, everything())
 
 # write_csv(unique_stebs_with_preferred, "/Users/gracehorne/Downloads/database-matches.csv")
+
+```
+
+### Replace stebs database names with preferred names
+
+```{r name-updates}
+
+stebs_wrangled_updated <- stebs_wrangled %>%
+  # remove list number
+  select(-hodges_list) %>%
+  # left join with preferred names
+  left_join(., unique_stebs_with_preferred, by = join_by(verbatim_name == database_name)) %>%
+  # put them in order
+  select(hodges_list, p_no, preferred_name, date, verbatim_name, -comments)
+  
 
 ```
 
@@ -429,48 +406,6 @@ get_names <- function(df, site) {
 # run function on davis names
 davis_full <- get_names(davis_wrangled, "davis")
 stebs_full <- get_names(stebs_wrangled, "stebs")
-
-```
-
-### ⏭️ ~~Manual names check~~
-
-This chunk provides exported lists of matched and unmatched names to be gone through by John and Grace.
-
-```{r name-check}
-#| eval: false
-#| include: false
-
-# get list of unmatched names
-davis_unmatched <- davis_full %>%
-  filter(manual_check == 1) %>%
-  distinct(verbatim_name)
-
-# get list of matched names
-davis_matched <- davis_full %>%
-  filter(manual_check == 0) %>%
-  distinct(verbatim_name)
-
-# write unmatched names .csv
-write_csv(davis_unmatched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/davis-names/davis_unmatched.csv")
-
-# write matched names .csv
-write_csv(davis_matched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/davis-names/davis_matched.csv")
-
-# get list of unmatched names
-stebs_unmatched <- stebs_full %>%
-  filter(manual_check == 1) %>%
-  distinct(verbatim_name)
-
-# get list of matched names
-stebs_matched <- stebs_full %>%
-  filter(manual_check == 0) %>%
-  distinct(verbatim_name)
-
-# write unmatched names .csv
-write_csv(stebs_unmatched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/stebs-names/stebs_unmatched.csv")
-
-# write matched names .csv
-write_csv(stebs_matched, "/Users/gracehorne/Library/CloudStorage/Box-Box/Meineke_Lab/Grace-folder/JAdB-moth-data/01_raw-data/stebs-names/stebs_matched.csv")
 
 ```
 
@@ -537,71 +472,6 @@ stebs_full <- stebs_full %>%
 # join the datasets together
 davis_full <- left_join(davis_full, checklist)
 stebs_full <- left_join(stebs_full, checklist)
-
-```
-
-### ⏭️ ~~ClimateNA data~~
-
-Here, I downloaded the data from ClimateNA programmatically. Because of the limits on queries one can ask of the database, I've opted to go with Terraclimate instead (below), for which no such limitations exist.
-
-```{r climateNA}
-#| eval: false
-#| include: false
-
-# # function to get elevation from a latitude and longitude
-# get_elevation <- function(site, lon, lat) {
-#   # create a single point
-#   point <- st_point(c(lon, lat))
-#   point_sf <- st_sfc(point, crs = 4326)
-#   point_sf <- st_sf(geometry = point_sf)
-#   
-#   # get elevation
-#   eldat <- get_elev_point(point_sf)
-#   
-#   # add columns for lat and lon and site plus rename elevation column
-#   eldat$lon <- lon
-#   eldat$lat <- lat
-#   eldat$ID1 <- site
-#   eldat$ID2 <- site
-#   eldat$el <- eldat$elevation
-#   
-#   return(eldat)
-# }
-# 
-# # get data for davis and stebs
-# davis_el <- get_elevation(site = "davis", lat = 38.5569, lon = -121.78)
-# stebs_el <- get_elevation(site = "stebs", lat = 38.51, lon = -122.0972)
-# 
-# # bind dataframes together
-# site_info <- rbind(davis_el, stebs_el) %>% tibble() %>%
-#   select(-elevation, -geometry, -elev_units) %>%
-#   select(ID1, ID2, lat, lon, el)
-# 
-# test <- ClimateNAr::ClimateNA_API2(
-#   ClimateBC_NA = "NA",
-#   inputFile = site_info,
-#   period = "Year_2022.ann",
-#   MSY = "M"
-# )
-# 
-# # empty list to be populated
-# climate_data <- list()
-# 
-# # year range
-# years <- 1989:2023
-# 
-# # Break the sequence into chunks of 5
-# chunks <- split(years, ceiling(seq_along(years) / 5))
-# 
-# # get climate data for stebs and davis for year range
-# for (year in chunks[[1]]) {
-#   climate_data[[paste(year)]] <- ClimateNAr::ClimateNA_API2(
-#   ClimateBC_NA = "NA",
-#   inputFile = site_info,
-#   period = paste0("Year_", year, ".ann"),
-#   MSY = "M"
-# )
-# }
 
 ```
 
