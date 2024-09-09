@@ -266,9 +266,9 @@ Double check that every observation has a preferred name.
 ```{r}
 
 # load in list of names
-preferred_names <- read_excel("../01_raw-data/formatted-names-GMH-v2.xlsx")
+preferred_names_stebs <- read_excel("../01_raw-data/formatted-names-GMH-v2.xlsx")
 
-preferred_names <- preferred_names %>%
+preferred_names_stebs <- preferred_names_stebs %>%
   # remove the 1st row
   slice(-1) %>%
   # combine the first and second columns
@@ -296,7 +296,7 @@ col_names <- c(
 )
 
 # rename
-names(preferred_names) <- col_names
+names(preferred_names_stebs) <- col_names
 
 # get unique names from stebs data
 unique_stebs <- stebs_wrangled %>% 
@@ -304,50 +304,84 @@ unique_stebs <- stebs_wrangled %>%
   distinct()
 
 # make a database with final columns and a list of old names
-preferred_names_db <- preferred_names %>%
+preferred_names_stebs_db <- preferred_names_stebs %>%
   select(hodges_list, p_no, preferred_name, comments) %>%
   mutate(old_names = map(1:nrow(.), function(i) {
     c(
-      preferred_names$preferred_name[i],
-      preferred_names$verbatim_name[i],
-      preferred_names$stebsum_name[i],
-      preferred_names$old_name1[i],
-      preferred_names$old_name2[i],
-      preferred_names$old_name3[i],
-      preferred_names$old_name4[i],
-      preferred_names$old_name5[i],
-      preferred_names$old_name6[i]
+      preferred_names_stebs$preferred_name[i],
+      preferred_names_stebs$verbatim_name[i],
+      preferred_names_stebs$stebsum_name[i],
+      preferred_names_stebs$old_name1[i],
+      preferred_names_stebs$old_name2[i],
+      preferred_names_stebs$old_name3[i],
+      preferred_names_stebs$old_name4[i],
+      preferred_names_stebs$old_name5[i],
+      preferred_names_stebs$old_name6[i]
     ) %>%
       discard(is.na)
   })) %>% distinct()
 
 # unnest the old_names column so that each old name is in its own row
-df_long <- preferred_names_db %>%
+df_long_stebs <- preferred_names_stebs_db %>%
   unnest(old_names)
 
 # join this long dataframe with the unique_names dataframe on old_name
 unique_stebs_with_preferred <- unique_stebs %>%
-  left_join(df_long, by = c("verbatim_name" = "old_names")) %>%
+  left_join(df_long_stebs, by = c("verbatim_name" = "old_names")) %>%
   rename("database_name" = "verbatim_name") %>%
   distinct() %>%
   select(hodges_list, p_no, everything())
 
-# write_csv(unique_stebs_with_preferred, "/Users/gracehorne/Downloads/database-matches.csv")
 
 ```
 
-### Replace stebs database names with preferred names
+### ⚠️ TEMPORARY - assign species w/o preferred name a unique ID
+
+```{r}
+
+library(dplyr)
+library(stringr)
+
+fill_na_with_unique_strings <- function(df) {
+  # Get the column index of 'preferred_name' if it exists
+  preferred_name_index <- which(names(df) == "preferred_name")
+  
+  na_rows <- which(is.na(df[, preferred_name_index]))
+  na_count <- length(na_rows)
+  
+  unique_strings <- sapply(1:na_count, function(x) {
+    paste(sample(c(letters, LETTERS, 0:9), 10, replace = TRUE), collapse = "")
+  })
+  
+  df <- df %>%
+    mutate(preferred_name = ifelse(row_number() %in% na_rows, unique_strings, preferred_name))
+  
+  df
+}
+
+# run function
+unique_stebs_with_pseudo_preferred <- fill_na_with_unique_strings(unique_stebs_with_preferred)
+
+```
+
+### ⚠️ Replace database names with preferred names
 
 ```{r name-updates}
+
+# !important: replace unique_stebs_with_pseudo_preferred with unique_stebs_with_preferred once
+# data frame is complete
 
 stebs_wrangled_updated <- stebs_wrangled %>%
   # remove list number
   select(-hodges_list) %>%
   # left join with preferred names
-  left_join(., unique_stebs_with_preferred, by = join_by(verbatim_name == database_name)) %>%
+  left_join(., unique_stebs_with_pseudo_preferred, by = join_by(verbatim_name == database_name)) %>%
   # put them in order
   select(hodges_list, p_no, preferred_name, date, verbatim_name, -comments)
   
+# !important: 
+davis_wrangled_updated <- davis_wrangled %>%
+  mutate(preferred_name = verbatim_name)
 
 ```
 
@@ -365,10 +399,13 @@ First, I made a list of names, then I exported that list so that I could run a c
 
 ```{r name-match}
 
+df <- davis_wrangled_updated
+site <- "davis"
+
 # create a function to match names to a backbone
 get_names <- function(df, site) {
   # get species names
-  taxa <- unique(df$verbatim_name)
+  taxa <- unique(df$preferred_name)
   
   # construct file name string
   filename <- paste0("../01_raw-data/", site, "-names/", 
@@ -390,26 +427,28 @@ get_names <- function(df, site) {
   # select columns, rename, and join with obs data
   names_df <- check_names %>%
     select(SortScore, ScientificName, MatchedCanonical, 
-           TaxonId, DataSourceTitle) %>%
+           TaxonId, DataSourceTitle, ClassificationPath) %>%
     rename(sort_score = SortScore,
-           verbatim_name = ScientificName,
+           matched_name = ScientificName,
            genus_species = MatchedCanonical,
            taxon_id = TaxonId,
            source = DataSourceTitle) %>%
     # create a column for bad matches or no matches
-    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(verbatim_name, "\\?"), 1, 0)) %>%
-    right_join(., df, join_by(verbatim_name))
+    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(matched_name, "\\?"), 1, 0),
+           family = str_match(ClassificationPath, "(?:[^|]*\\|){4}([^|]*)")[,2]) %>%
+    select(-ClassificationPath) %>%
+    right_join(., df, join_by(matched_name ==  preferred_name))
   
   return(names_df)
 }
 
 # run function on davis names
-davis_full <- get_names(davis_wrangled, "davis")
-stebs_full <- get_names(stebs_wrangled, "stebs")
+davis_full <- get_names(davis_wrangled_updated, "davis")
+stebs_full <- get_names(stebs_wrangled_updated, "stebs")
 
 ```
 
-### Add checklist number
+### ⚠️ Add checklist number
 
 I joined the Moth Photographer's group checklist numbers to John's data.
 
@@ -580,18 +619,35 @@ weather <- TerraClimate %>%
     ppt = sum(ppt, na.rm = TRUE)
   )
 
+# make into wider format
+weather <- weather %>%
+  # pivot the data longer first
+  pivot_longer(
+    cols = c(tmin, tmax, ppt),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  # now create the new column names
+  mutate(new_col = paste(variable, season, sep = "_")) %>%
+  # pivot wider to get the desired format
+  pivot_wider(
+    id_cols = c(dataset, year),
+    names_from = new_col,
+    values_from = value
+  )
+
 # join weather data to observation data
 stebs_full <- stebs_full %>%
   mutate(month = month(date), 
          year = year(date), 
          season = get_season(month)) %>%
-  left_join(weather %>% filter(dataset == "stebs"), by = c("season", "year"))
+  left_join(weather %>% filter(dataset == "stebs"), by = c("year"))
 
 davis_full <- davis_full %>%
   mutate(month = month(date), 
          year = year(date), 
          season = get_season(month)) %>%
-  left_join(weather %>% filter(dataset == "davis"), by = c("season", "year"))
+  left_join(weather %>% filter(dataset == "davis"), by = c("year"))
   
 ```
 
@@ -694,7 +750,7 @@ full_data <- bind_rows(
 
 ```
 
-### Add in pest, fire, and trail data
+### Add in pest, fire, trail, and SST data
 
 At this juncture, I only want to know if a species is a pest or not. So, I will create a list of all species in the pest data frame. If a binomial is in it, then it will receive a 1 in the column `any_pest` if not it will receive a 0. Trail and fire need only to be joined to the Cold Canyon data.
 
@@ -705,6 +761,16 @@ fire_predictor <- read_csv("../03_processed-data/predictors/fire_predictor.csv")
 
 # get trail years
 trail_predictor <- read_csv("../03_processed-data/predictors/trail_predictor.csv")
+
+# get SST predictor
+SST_predictor <- read_csv("../03_processed-data/predictors/meiv2.csv")
+
+# get average SST per year and pivot longer
+SST_predictor <- SST_predictor %>%
+  pivot_longer(everything(), names_to = "year", values_to = "value") %>%
+  group_by(year) %>%
+  summarize(SST = mean(value)) %>%
+  mutate(year = as.numeric(year))
 
 # join fire and trail predictors to stebs data
 # filter for dataset == "stebs"
@@ -734,5 +800,18 @@ unique_pests <- unique(long_pest_predictor[[2]])  # The first column name might 
 # add pest status to full df
 full_data  <- full_data %>%
   mutate(any_pest = ifelse(genus_species %in% unique_pests & !is.na(genus_species), 1, 0))
+
+# add SST to full data
+full_data <- full_data %>%
+  left_join(SST_predictor)
+
+```
+
+### Write final dataset
+
+```{r}
+
+# write data to file
+write_csv(full_data, "../03_processed-data/full_data.csv")
 
 ```
