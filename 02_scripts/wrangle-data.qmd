@@ -259,9 +259,49 @@ stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>%
 
 ```
 
-### Formatted preferred names
+### ALL NAMES
 
-Double check that every observation has a preferred name.
+This is John's latest iteration of a name-matching db.
+
+```{r link-across-sites}
+
+# load in all names excel sheet
+all_names <- read_excel("../01_raw-data/ALL NAMES.xlsx")
+
+# remove extraneous columns
+all_names <- all_names %>%
+  select(-c(3, 5, 6, 7, 9, 10), -(11:14), -(16:19))
+
+# vector of new names
+col_names <- c(
+  "hodges_list",
+  "p_no",
+  "favored_name",
+  "davis_formatted",
+  "davis_spreadsheet",
+  "stebs_formatted",
+  "stebsum_name",
+  "is_highlighted"
+)
+
+# rename
+names(all_names) <- col_names
+
+# remove the first 4 rows; remove if no favored name
+all_names <- all_names %>%
+  slice(-(1:4)) %>%
+  filter(!is.na(favored_name))
+
+# removals
+all_names <- all_names %>%
+  filter(favored_name != "Aglossa caprealis (Hübner)")
+
+
+```
+
+### Formatted "favored" names
+
+Double check that every observation has a "favored" name.
 
 ```{r}
 
@@ -298,97 +338,107 @@ col_names <- c(
 # rename
 names(preferred_names_stebs) <- col_names
 
+# remove hodges_list and p_no from preferred_names_stebs
+all_names_joined <- preferred_names_stebs %>%
+  select(-hodges_list, -p_no) %>%
+  rename(old_name9 = stebsum_name) %>%
+  full_join(all_names, by = c("preferred_name" = "favored_name"))
+
+# rename 2 columns and then reorder to preferred order
+all_names_joined <- all_names_joined %>%
+  rename(old_name8 = verbatim_name) %>%
+  select(hodges_list, p_no, preferred_name, davis_formatted,
+         davis_spreadsheet, stebs_formatted, stebsum_name,
+         old_name1, old_name2, old_name3, old_name4, old_name5,
+         old_name6, old_name7, old_name8, old_name9)
+
 # get unique names from stebs data
 unique_stebs <- stebs_wrangled %>% 
   select(verbatim_name) %>% 
   distinct()
 
+# get unique names from davis data
+unique_davis <- davis_wrangled %>% 
+  select(verbatim_name) %>% 
+  distinct()
+
+# merge unique names together
+unique_names <- rbind(unique_davis, unique_stebs) %>% distinct()
+
 # make a database with final columns and a list of old names
-preferred_names_stebs_db <- preferred_names_stebs %>%
-  select(hodges_list, p_no, preferred_name, comments) %>%
+all_names_db <- all_names_joined %>%
+  select(hodges_list, p_no, preferred_name) %>%
   mutate(old_names = map(1:nrow(.), function(i) {
     c(
-      preferred_names_stebs$preferred_name[i],
-      preferred_names_stebs$verbatim_name[i],
-      preferred_names_stebs$stebsum_name[i],
-      preferred_names_stebs$old_name1[i],
-      preferred_names_stebs$old_name2[i],
-      preferred_names_stebs$old_name3[i],
-      preferred_names_stebs$old_name4[i],
-      preferred_names_stebs$old_name5[i],
-      preferred_names_stebs$old_name6[i]
+      all_names_joined$preferred_name[i],
+      all_names_joined$davis_formatted[i],
+      all_names_joined$davis_spreadsheet[i],
+      all_names_joined$stebs_formatted[i],
+      all_names_joined$stebsum_name[i],
+      all_names_joined$old_name1[i],
+      all_names_joined$old_name2[i],
+      all_names_joined$old_name3[i],
+      all_names_joined$old_name4[i],
+      all_names_joined$old_name5[i],
+      all_names_joined$old_name6[i],
+      all_names_joined$old_name7[i],
+      all_names_joined$old_name8[i],
+      all_names_joined$old_name9[i]
     ) %>%
       discard(is.na)
   })) %>% distinct()
 
 # unnest the old_names column so that each old name is in its own row
-df_long_stebs <- preferred_names_stebs_db %>%
+df_long <- all_names_db %>%
   unnest(old_names)
 
-# join this long dataframe with the unique_names dataframe on old_name
-unique_stebs_with_preferred <- unique_stebs %>%
-  left_join(df_long_stebs, by = c("verbatim_name" = "old_names")) %>%
+# join this long dataframe with the unique_names dataframe by old_name
+unique_names_with_preferred <- unique_names %>%
+  left_join(df_long, by = c("verbatim_name" = "old_names")) %>%
   rename("database_name" = "verbatim_name") %>%
   distinct() %>%
   select(hodges_list, p_no, everything())
 
+# get names without preferred matches
+# test <- unique_names_with_preferred %>%
+#   filter(is.na(preferred_name))
+# 
+# write_csv(test, "/Users/gracehorne/Desktop/names.csv")
 
 ```
 
-### ⚠️ TEMPORARY - assign species w/o preferred name a unique ID
-
-```{r}
-
-library(dplyr)
-library(stringr)
-
-fill_na_with_unique_strings <- function(df) {
-  # Get the column index of 'preferred_name' if it exists
-  preferred_name_index <- which(names(df) == "preferred_name")
-  
-  na_rows <- which(is.na(df[, preferred_name_index]))
-  na_count <- length(na_rows)
-  
-  unique_strings <- sapply(1:na_count, function(x) {
-    paste(sample(c(letters, LETTERS, 0:9), 10, replace = TRUE), collapse = "")
-  })
-  
-  df <- df %>%
-    mutate(preferred_name = ifelse(row_number() %in% na_rows, unique_strings, preferred_name))
-  
-  df
-}
-
-# run function
-unique_stebs_with_pseudo_preferred <- fill_na_with_unique_strings(unique_stebs_with_preferred)
-
-```
-
-### ⚠️ Replace database names with preferred names
+### Replace database names with preferred names
 
 ```{r name-updates}
 
-# !important: replace unique_stebs_with_pseudo_preferred with unique_stebs_with_preferred once
-# data frame is complete
-
+# update names
 stebs_wrangled_updated <- stebs_wrangled %>%
   # remove list number
   select(-hodges_list) %>%
   # left join with preferred names
-  left_join(., unique_stebs_with_pseudo_preferred, by = join_by(verbatim_name == database_name)) %>%
+  left_join(., unique_names_with_preferred, by = join_by(verbatim_name == database_name)) %>%
   # put them in order
-  select(hodges_list, p_no, preferred_name, date, verbatim_name, -comments)
-  
-# !important: 
+  select(hodges_list, p_no, preferred_name, date, verbatim_name) %>%
+  # drop observations w/o preferred_name
+  drop_na(preferred_name)
+
+# update names
 davis_wrangled_updated <- davis_wrangled %>%
-  mutate(preferred_name = verbatim_name)
+  # remove list number
+  select(-hodges_list) %>%
+  # left join with preferred names
+  left_join(., unique_names_with_preferred, by = join_by(verbatim_name == database_name)) %>%
+  # put them in order
+  select(hodges_list, p_no, preferred_name, date, verbatim_name) %>%
+  # drop observations w/o preferred_name
+  drop_na(preferred_name)
+
 
 ```
 
 ### ⚠️ Add John's confidence levels
 
 ```{r john-species-confidence}
-
 
 
 ```
@@ -398,9 +448,6 @@ davis_wrangled_updated <- davis_wrangled %>%
 First, I made a list of names, then I exported that list so that I could run a command line script to process the data and tie it back to the GBIF and iNat taxonomy backbones. Then, I created a column based on the sort scores so that I am able to identify which "species" need to be manually checked.
 
 ```{r name-match}
-
-df <- davis_wrangled_updated
-site <- "davis"
 
 # create a function to match names to a backbone
 get_names <- function(df, site) {
