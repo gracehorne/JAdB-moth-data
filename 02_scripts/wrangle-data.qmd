@@ -303,7 +303,7 @@ all_names <- all_names %>%
 
 Double check that every observation has a "favored" name.
 
-```{r}
+```{r favored-names}
 
 # load in list of names
 preferred_names_stebs <- read_excel("../01_raw-data/formatted-names-GMH-v2.xlsx")
@@ -399,12 +399,6 @@ unique_names_with_preferred <- unique_names %>%
   distinct() %>%
   select(hodges_list, p_no, everything())
 
-# get names without preferred matches
-# test <- unique_names_with_preferred %>%
-#   filter(is.na(preferred_name))
-# 
-# write_csv(test, "/Users/gracehorne/Desktop/names.csv")
-
 ```
 
 ### Replace database names with preferred names
@@ -443,6 +437,56 @@ davis_wrangled_updated <- davis_wrangled %>%
 
 ```
 
+### Calculate zero years for all species
+
+```{r zero-years}
+
+# make dataframe with preferred name and date only
+names_obs_stebs <- stebs_wrangled_updated %>%
+  select(preferred_name, date)
+
+names_obs_davis <- davis_wrangled_updated %>%
+  select(preferred_name, date)
+
+
+fill_missing_years <- function(df) {
+  # Convert date to year and count observations per species per year
+  yearly_counts <- df %>%
+    mutate(year = year(as.Date(date))) %>%
+    group_by(preferred_name, year) %>%
+    summarize(observations = n(), .groups = "drop")
+  
+  # Get the range of years
+  min_year <- min(yearly_counts$year)
+  max_year <- max(yearly_counts$year)
+  all_years <- min_year:max_year
+  
+  # Get unique preferred names
+  preferred_names <- unique(df$preferred_name)
+  
+  # Create a dataframe with all combinations of preferred_name and year
+  all_combinations <- expand.grid(preferred_name = preferred_names, year = all_years)
+  
+  # Merge with the yearly counts
+  result <- all_combinations %>%
+    left_join(yearly_counts, by = c("preferred_name", "year")) %>%
+    mutate(day_positives = ifelse(is.na(observations), 0, 1)) %>%
+    select(preferred_name, year, day_positives) %>%
+    arrange(preferred_name, year) %>%
+    rename(matched_name = preferred_name)
+  
+  return(result)
+}
+
+# Apply the function
+stebs_zeros <- fill_missing_years(names_obs_stebs) %>% 
+  filter(day_positives == 0)
+
+davis_zeros <- fill_missing_years(names_obs_davis) %>% 
+  filter(day_positives == 0)
+
+```
+
 ### Match names to a backbone
 
 First, I made a list of names, then I exported that list so that I could run a command line script to process the data and tie it back to the GBIF and iNat taxonomy backbones. Then, I created a column based on the sort scores so that I am able to identify which "species" need to be manually checked.
@@ -451,6 +495,7 @@ First, I made a list of names, then I exported that list so that I could run a c
 
 # create a function to match names to a backbone
 get_names <- function(df, site) {
+
   # get species names
   taxa <- unique(df$preferred_name)
   
@@ -702,98 +747,76 @@ davis_full <- davis_full %>%
 
 ```{r fdps}
 
-# write a function to calculate fractional day positives
-calculate_FDP <- function(data) {
-    # convert date to year and day of year (DOY)
+# Function to calculate Fractional Day Positives (FDP)
+calculate_FDP <- function(data, zeros_data) {
+  require(dplyr)
+  require(lubridate)
+
+  # Convert date to year and day of year (DOY)
   data <- data %>%
     mutate(year = year(date), DOY = yday(date))
-  
-  # calculate day_positives and collection_events
+
+  # Calculate day_positives and collection_events
   day_positives <- data %>%
-    group_by(genus_species, year) %>%
-    summarise(day_positives = n(), .groups = 'drop')
-  
+    group_by(matched_name, year) %>%
+    summarise(day_positives = n(), .groups = 'drop') %>%
+    rbind(zeros_data)
+
   collection_events <- data %>%
     group_by(year) %>%
     summarise(collection_events = n_distinct(date), .groups = 'drop')
-  
-  # calculate flight_min and flight_max
+
+  # Calculate flight_min and flight_max
   flight_window <- data %>%
-    group_by(genus_species) %>%
+    group_by(matched_name) %>%
     summarise(
       flight_min = min(DOY),
       flight_max = max(DOY),
       .groups = 'drop'
     )
-  
-  # merge flight window with original data
-  data <- data %>%
-    left_join(flight_window, by = "genus_species")
-  
-  # initialize dataframe for adj_collection_events
-  adj_collection_events <- data.frame(
-    genus_species = character(),
-    year = integer(),
-    adj_collection_events = integer(),
-    stringsAsFactors = FALSE
-  )
-  
-  # calculate adj_collection_events using nested for loop with indexing
-  unique_species <- unique(data$genus_species) %>% na.omit()
-  unique_years <- unique(data$year) %>% na.omit()
-  
-  for (i in seq_along(unique_species)) {
-    species <- unique_species[i]
-    species_data <- data %>% filter(genus_species == species)
-    flight_min <- unique(species_data$flight_min)
-    flight_max <- unique(species_data$flight_max)
-    
-    for (j in seq_along(unique_years)) {
-      annum <- unique_years[j]
-      year_data <- data %>% filter(year == annum)
-      distinct_dates <- unique(year_data$date)
-      tally <- sum(yday(distinct_dates) >= flight_min &
-                     yday(distinct_dates) <= flight_max)
-      
-      adj_collection_events <- rbind(
-        adj_collection_events,
-        data.frame(
-          genus_species = species,
-          year = annum,
-          adj_collection_events = tally
-        )
-      )
-    }
-  }
-  
-  # combine all results
+
+  # Calculate adj_collection_events
+  adj_collection_events <- data %>%
+    left_join(flight_window, by = "matched_name") %>%
+    distinct(matched_name, year, date, flight_min, flight_max) %>%
+    group_by(matched_name, year) %>%
+    summarise(
+      adj_collection_events = sum(yday(date) >= flight_min & yday(date) <= flight_max),
+      .groups = 'drop'
+    )
+
+  # Combine all results
   result <- day_positives %>%
     left_join(collection_events, by = "year") %>%
     mutate(day_negatives = collection_events - day_positives) %>%
-    left_join(flight_window, by = "genus_species") %>%
-    left_join(adj_collection_events, by = c("genus_species", "year"))
-  
-  data <- left_join(data, result)
-  
+    left_join(flight_window, by = "matched_name") %>%
+    left_join(adj_collection_events, by = c("matched_name", "year"))
+
+  # Merge results with original data
+  data <- data %>%
+    select(-DOY) %>%  # Remove the temporary DOY column
+    left_join(result, by = c("matched_name", "year"))
+
   return(data)
 }
 
-# list of dataframes to iterate over
+# List of dataframes to iterate over
 data_list <- list(
   stebs = stebs_full,
   davis = davis_full
 )
 
-# apply the function to each dataframe in the list
-results <- map(data_list, calculate_FDP)
-
-# flatten the list by appending data frames and create a new column based on list names
-full_data <- bind_rows(
-  map2(results, names(results), ~ {
-    .x %>%
-      mutate(dataset = .y)
-  })
+# List of corresponding zeros dataframes
+zeros_list <- list(
+  stebs = stebs_zeros,
+  davis = davis_zeros
 )
+
+# Apply the function to each dataframe in the list
+results <- purrr::map2(data_list, zeros_list, calculate_FDP)
+
+# Flatten the list by appending data frames and create a new column based on list names
+full_data <- purrr::map2_dfr(results, names(results), ~ mutate(.x, dataset = .y))
 
 ```
 
