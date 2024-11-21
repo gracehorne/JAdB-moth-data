@@ -437,6 +437,17 @@ davis_wrangled_updated <- davis_wrangled %>%
 
 ```
 
+### Write raw observations
+
+```{r obs-data}
+
+# write data to file
+write_csv(davis_wrangled_updated, "../03_processed-data/davis-obs-complete.csv")
+
+write_csv(stebs_wrangled_updated, "../03_processed-data/stebs-obs-complete.csv")
+
+```
+
 ### Calculate zero years for all species
 
 ```{r zero-years}
