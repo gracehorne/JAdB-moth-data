@@ -758,26 +758,26 @@ davis_full <- davis_full %>%
 
 ```{r fdps}
 
-# Function to calculate Fractional Day Positives (FDP)
 calculate_FDP <- function(data, zeros_data) {
   require(dplyr)
   require(lubridate)
-
-  # Convert date to year and day of year (DOY)
+  
+  # convert date to year and day of year (DOY)
   data <- data %>%
-    mutate(year = year(date), DOY = yday(date))
-
-  # Calculate day_positives and collection_events
+    mutate(year = year(date), 
+           DOY = yday(date))
+  
+  # calculate day_positives and collection_events
   day_positives <- data %>%
     group_by(matched_name, year) %>%
     summarise(day_positives = n(), .groups = 'drop') %>%
     rbind(zeros_data)
-
+  
   collection_events <- data %>%
     group_by(year) %>%
     summarise(collection_events = n_distinct(date), .groups = 'drop')
-
-  # Calculate flight_min and flight_max
+  
+  # calculate flight window for each species
   flight_window <- data %>%
     group_by(matched_name) %>%
     summarise(
@@ -785,29 +785,34 @@ calculate_FDP <- function(data, zeros_data) {
       flight_max = max(DOY),
       .groups = 'drop'
     )
-
-  # Calculate adj_collection_events
-  adj_collection_events <- data %>%
-    left_join(flight_window, by = "matched_name") %>%
-    distinct(matched_name, year, date, flight_min, flight_max) %>%
+  
+  # get all unique date-year combinations
+  all_collection_dates <- data %>%
+    distinct(date, year) %>%
+    mutate(DOY = yday(date))
+  
+  # calculate adj_collection_events - modified approach
+  adj_collection_events <- all_collection_dates %>%
+    # create a row for each species-date combination
+    cross_join(flight_window) %>%
+    # keep only dates within flight window
+    filter(DOY >= flight_min, DOY <= flight_max) %>%
+    # count days within window for each species-year
     group_by(matched_name, year) %>%
-    summarise(
-      adj_collection_events = sum(yday(date) >= flight_min & yday(date) <= flight_max),
-      .groups = 'drop'
-    )
-
-  # Combine all results
+    summarise(adj_collection_events = n(), .groups = 'drop')
+  
+  # combine all results
   result <- day_positives %>%
     left_join(collection_events, by = "year") %>%
     mutate(day_negatives = collection_events - day_positives) %>%
     left_join(flight_window, by = "matched_name") %>%
     left_join(adj_collection_events, by = c("matched_name", "year"))
-
-  # Merge results with original data
+  
+  # merge results with original data
   data <- data %>%
-    select(-DOY) %>%  # Remove the temporary DOY column
+    select(-DOY) %>%
     left_join(result, by = c("matched_name", "year"))
-
+  
   return(data)
 }
 
