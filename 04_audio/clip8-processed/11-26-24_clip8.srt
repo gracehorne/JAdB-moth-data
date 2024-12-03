@@ -1,0 +1,1296 @@
+1
+00:00:00,000 --> 00:00:06,320
+would necessarily have to be included in it, but you should know about it now because
+
+2
+00:00:06,320 --> 00:00:13,080
+it's kind of the whole process.
+
+3
+00:00:16,600 --> 00:00:19,300
+So the easiest thing is collecting.
+
+4
+00:00:20,380 --> 00:00:25,460
+Then you have to do the spreading and mounting and so forth.
+
+5
+00:00:25,460 --> 00:00:30,040
+So where did the names come from?
+
+6
+00:00:33,140 --> 00:00:39,700
+Major sources run as I compare them to specimens in the museum because when I first started there was
+
+7
+00:00:39,700 --> 00:00:47,420
+very few internet resources. In fact, there may not have even been an internet when I started.
+
+8
+00:00:47,420 --> 00:00:59,420
+So, you know, like Moth Photographers Group, it's slowly built up and it's fairly reliable now, but it's not perfect nor is anything else.
+
+9
+00:00:59,420 --> 00:01:17,420
+So I compared things to things in the museum here, but also I got help of a lot of experts, some of whom were advanced amateurs and others were professional entomologists.
+
+10
+00:01:17,420 --> 00:01:29,420
+The most important was Jerry Powell for the micros and many of the macros, but nobody knows Western micros better than Jerry Powell.
+
+11
+00:01:29,420 --> 00:01:46,420
+Ron Robertson, he was a teacher and had a degree in biology from Berkeley and had worked for a long time
+
+12
+00:01:46,420 --> 00:01:58,420
+as a volunteer curator at the California Academy and he had very advanced skills working with Noctuates.
+
+13
+00:01:58,420 --> 00:02:23,300
+So he especially helped with Noctuates because after he was through working at Cal Academy, he came up here to work on our collection and our collection was in pretty good shape because at least for Noctuates, we had two people who specialized in Noctuates and donated their collection here.
+
+14
+00:02:23,300 --> 00:02:33,300
+And that was Bucket and that was Bucket and you may see their names throughout the checklist.
+
+15
+00:02:33,300 --> 00:02:51,300
+And then there was a host of other people who were less, who contributed less, but the most important ones were Ron Leuchner and he had a reputation for providing erroneous names.
+
+16
+00:02:51,300 --> 00:02:53,300
+Oh no.
+
+17
+00:02:53,300 --> 00:02:55,300
+But he would always get you closer to the right answer.
+
+18
+00:02:55,300 --> 00:02:58,300
+And even the experts make mistakes.
+
+19
+00:02:58,300 --> 00:03:07,300
+You know, I find mistakes in the names I got from Ron Robertson from what I got from Jerry Powell.
+
+20
+00:03:07,300 --> 00:03:16,300
+But it's kind of a fool's errand to think that you can put the right name on everything.
+
+21
+00:03:16,300 --> 00:03:17,300
+And for various reasons.
+
+22
+00:03:17,300 --> 00:03:19,300
+One, not everything has a name.
+
+23
+00:03:19,300 --> 00:03:25,300
+And the other thing is names change all the time as concepts change.
+
+24
+00:03:25,300 --> 00:03:28,300
+So we do the best we can.
+
+25
+00:03:28,300 --> 00:03:38,300
+And so our touchstone is going to be the checklist and modifications which showed up on Mark Photographer's Group.
+
+26
+00:03:38,300 --> 00:03:51,300
+So those are the names which we'll use and we have to say probably at the end of this year we're not going to change names after this unless it's clear that they should be changed.
+
+27
+00:03:51,300 --> 00:03:52,300
+Mm-hmm.
+
+28
+00:03:52,300 --> 00:04:01,300
+But if it's just an opinion about whether something's a species or subspecies or this, that, and other things, I think it's irrelevant.
+
+29
+00:04:01,300 --> 00:04:07,300
+Because what you want to know is whether a group of specimens are all the same thing or not.
+
+30
+00:04:07,300 --> 00:04:08,300
+Yeah.
+
+31
+00:04:08,300 --> 00:04:09,300
+Yeah.
+
+32
+00:04:09,300 --> 00:04:24,300
+So you could just call them, you know, the guy who did the recovery study of large moths in the Chico area after the big fire, the Paradise Fire of some years ago.
+
+33
+00:04:24,300 --> 00:04:25,300
+Mm-hmm.
+
+34
+00:04:25,300 --> 00:04:28,300
+He didn't, he didn't bother to identify things.
+
+35
+00:04:28,300 --> 00:04:29,300
+He just said, well.
+
+36
+00:04:29,300 --> 00:04:30,300
+Group them together.
+
+37
+00:04:30,300 --> 00:04:33,300
+These seem to be all the same species.
+
+38
+00:04:33,300 --> 00:04:38,300
+And that's what he did.
+
+39
+00:04:38,300 --> 00:04:50,300
+I didn't, he, he had a poster at the Lepidopter Society meetings when it was here in Davis in 2019.
+
+40
+00:04:50,300 --> 00:04:55,300
+And because I was busy with somebody else, I didn't get a chance to see it.
+
+41
+00:04:55,300 --> 00:05:00,300
+I talked to his major professor and said, well, I can help identify specimens for them.
+
+42
+00:05:00,300 --> 00:05:02,300
+And it went nowhere.
+
+43
+00:05:02,300 --> 00:05:03,300
+He didn't contact you?
+
+44
+00:05:03,300 --> 00:05:04,300
+Yeah.
+
+45
+00:05:04,300 --> 00:05:05,300
+Oh, that's weird.
+
+46
+00:05:05,300 --> 00:05:13,300
+I don't know that he ever put names on a lot of his specimens, but he probably used moth photographers.
+
+47
+00:05:13,300 --> 00:05:15,300
+Yeah.
+
+48
+00:05:15,300 --> 00:05:16,300
+Yeah.
+
+49
+00:05:16,300 --> 00:05:27,300
+But, um, for certain groups and, you know, I'll mention that, you know, this is a difficult group when we get to various genera.
+
+50
+00:05:27,300 --> 00:05:28,300
+Yeah.
+
+51
+00:05:28,300 --> 00:05:32,300
+Um, cool.
+
+52
+00:05:32,300 --> 00:05:38,300
+So yeah, so yeah, like pretty much you, you went to experts when there was an expert in a group.
+
+53
+00:05:38,300 --> 00:05:44,300
+That's the, that's part of the process.
+
+54
+00:05:44,300 --> 00:05:58,300
+The other is if there are reliable illustrations of genitalia, I'll do dissections if it will help me clarify or confirm identifications.
+
+55
+00:05:58,300 --> 00:06:05,300
+But it's kind of a waste of time for me to do it if I don't have anything to compare it with.
+
+56
+00:06:05,300 --> 00:06:16,300
+And just by sheer coincidence, I decided that I would dissect Stamnotes because I wasn't sure how many species we had.
+
+57
+00:06:16,300 --> 00:06:23,300
+And I couldn't tell by looking at museum specimens what we had.
+
+58
+00:06:23,300 --> 00:06:30,300
+And Wagner just shortly afterwards had a student and who decided to work on Stamnotes.
+
+59
+00:06:30,300 --> 00:06:33,300
+So that's getting clarified now.
+
+60
+00:06:33,300 --> 00:06:34,300
+Perfect.
+
+61
+00:06:34,300 --> 00:06:41,300
+But I dissected them all and determined that we did have the species that I thought we had,
+
+62
+00:06:41,300 --> 00:06:49,300
+plus some that were hard to distinguish from some of the ones that we have.
+
+63
+00:06:49,300 --> 00:07:00,300
+But Bill Patterson, who, you know, collected at Quail Ridge and only used external characters to identify his moth,
+
+64
+00:07:00,300 --> 00:07:03,300
+he pretty much had everything right, so.
+
+65
+00:07:03,300 --> 00:07:04,300
+Oh, that's interesting.
+
+66
+00:07:04,300 --> 00:07:05,300
+It turns out.
+
+67
+00:07:05,300 --> 00:07:08,300
+So he didn't do any dissections and he still pretty much had it?
+
+68
+00:07:08,300 --> 00:07:12,300
+No, he's, I tried to train him one time, but he decided he couldn't do it.
+
+69
+00:07:12,300 --> 00:07:17,300
+You know, there's a limit to how many small moths he can dissect.
+
+70
+00:07:17,300 --> 00:07:24,300
+And recently I got an email from him and he said that he's having trouble spreading anything now.
+
+71
+00:07:24,300 --> 00:07:31,300
+He's 85, so his eyesight's bad.
+
+72
+00:07:31,300 --> 00:07:34,300
+He said because of his eyesight he can't spread anymore.
+
+73
+00:07:34,300 --> 00:07:38,300
+But he's just kind of stepping back from the hobby.
+
+74
+00:07:38,300 --> 00:07:43,300
+He donated all of his moths sometime to the collection here
+
+75
+00:07:43,300 --> 00:07:50,300
+and has kept his butterfly collection and maybe a few, oh my moths, I don't know.
+
+76
+00:07:50,300 --> 00:07:53,300
+So do you want to start on this before Emily gets here or do you want to wait?
+
+77
+00:07:53,300 --> 00:07:55,300
+We can, yeah.
+
+78
+00:07:55,300 --> 00:07:56,300
+Whatever you want to do.
+
+79
+00:07:56,300 --> 00:08:00,300
+If you think it would be prudent to wait for her.
+
+80
+00:08:00,300 --> 00:08:02,300
+I mean, she gets your notes anyway.
+
+81
+00:08:02,300 --> 00:08:03,300
+Yeah, so.
+
+82
+00:08:03,300 --> 00:08:05,300
+And we will be going over.
+
+83
+00:08:05,300 --> 00:08:06,300
+Cold Canyon.
+
+84
+00:08:06,300 --> 00:08:07,300
+And then later on.
+
+85
+00:08:07,300 --> 00:08:08,300
+Yes.
+
+86
+00:08:08,300 --> 00:08:11,300
+And so it'll be a second chance to talk about some of these.
+
+87
+00:08:11,300 --> 00:08:12,300
+Exactly.
+
+88
+00:08:12,300 --> 00:08:13,300
+Yeah.
+
+89
+00:08:13,300 --> 00:08:15,300
+So if we, we left off at the O's.
+
+90
+00:08:15,300 --> 00:08:16,300
+At O's?
+
+91
+00:08:16,300 --> 00:08:17,300
+Yeah.
+
+92
+00:08:17,300 --> 00:08:18,300
+Oh.
+
+93
+00:08:18,300 --> 00:08:19,300
+Yeah.
+
+94
+00:08:19,300 --> 00:08:20,300
+Oh.
+
+95
+00:08:20,300 --> 00:08:21,300
+Okay.
+
+96
+00:08:21,300 --> 00:08:24,300
+Even if it's not human enough there.
+
+97
+00:08:24,300 --> 00:08:25,300
+We did monfa.
+
+98
+00:08:25,300 --> 00:08:26,300
+We did.
+
+99
+00:08:26,300 --> 00:08:28,300
+Did we do pneumophila?
+
+100
+00:08:28,300 --> 00:08:29,300
+Mm-hmm.
+
+101
+00:08:29,300 --> 00:08:30,300
+Okay.
+
+102
+00:08:30,300 --> 00:08:41,300
+Oh, backtracking to Noctua pro nuva.
+
+103
+00:08:41,300 --> 00:08:46,300
+There's another species which like Noctua was introduced from Europe.
+
+104
+00:08:46,300 --> 00:08:51,300
+And all the records were kind of in British Columbia for a while.
+
+105
+00:08:51,300 --> 00:08:54,300
+But now I see that it's reached Southern Oregon.
+
+106
+00:08:54,300 --> 00:08:59,300
+And it's quite similar with a yellow-orange hindwing.
+
+107
+00:08:59,300 --> 00:09:06,300
+But it has a dot in the middle of the central area of the hindwing that is absent on it.
+
+108
+00:09:06,300 --> 00:09:09,300
+And it's smaller and the wings are stubbier, so.
+
+109
+00:09:09,300 --> 00:09:11,300
+Is it the same genus?
+
+110
+00:09:11,300 --> 00:09:13,300
+Same genus, Noctua.
+
+111
+00:09:13,300 --> 00:09:14,300
+Hi, John.
+
+112
+00:09:14,300 --> 00:09:15,300
+Hi.
+
+113
+00:09:15,300 --> 00:09:16,300
+Hi, Grace.
+
+114
+00:09:16,300 --> 00:09:17,300
+Sorry that I'm late.
+
+115
+00:09:17,300 --> 00:09:18,300
+I had to shift this into the two.
+
+116
+00:09:18,300 --> 00:09:19,300
+I'm leaving my voice, so I don't know how long I'll last today.
+
+117
+00:09:19,300 --> 00:09:20,300
+That's okay.
+
+118
+00:09:20,300 --> 00:09:21,300
+Okay.
+
+119
+00:09:21,300 --> 00:09:23,300
+It's okay with you, but it's not okay.
+
+120
+00:09:23,300 --> 00:09:24,300
+I'm sorry.
+
+121
+00:09:24,300 --> 00:09:25,300
+Yeah.
+
+122
+00:09:25,300 --> 00:09:27,300
+I said, it's just as long as you're comfortable.
+
+123
+00:09:27,300 --> 00:09:29,300
+And he said, well, I'll go home then.
+
+124
+00:09:33,300 --> 00:09:37,300
+I'm blaming it on the cortisone shot from the back out of my knees.
+
+125
+00:09:37,300 --> 00:09:39,300
+Does it feel better?
+
+126
+00:09:39,300 --> 00:09:40,300
+It's just the same.
+
+127
+00:09:40,300 --> 00:09:41,300
+I'm sorry.
+
+128
+00:09:41,300 --> 00:09:46,300
+But it's hard to tell because it may take a while and it's only been a few days.
+
+129
+00:09:46,300 --> 00:10:01,300
+And if there's anything, it seems that there's not persistent pain like there was if I did
+
+130
+00:10:01,300 --> 00:10:04,300
+something that put a lot of stress on my knee.
+
+131
+00:10:04,300 --> 00:10:11,300
+So what I'm hoping to do is to be able to take long walks once again.
+
+132
+00:10:11,300 --> 00:10:13,300
+And I haven't tested that yet.
+
+133
+00:10:13,300 --> 00:10:15,300
+That's quite a part of my quality of life too.
+
+134
+00:10:15,300 --> 00:10:16,300
+I understand that.
+
+135
+00:10:16,300 --> 00:10:17,300
+Where are we?
+
+136
+00:10:17,300 --> 00:10:19,300
+We're starting with the O's.
+
+137
+00:10:19,300 --> 00:10:20,300
+Yes.
+
+138
+00:10:20,300 --> 00:10:23,300
+And the first one that I have here is Eagle Coney and Nova Mundi.
+
+139
+00:10:23,300 --> 00:10:24,300
+Thank you.
+
+140
+00:10:24,300 --> 00:10:25,300
+Same here.
+
+141
+00:10:29,300 --> 00:10:31,300
+Oh, Eagle Coney.
+
+142
+00:10:31,300 --> 00:10:32,300
+It's over here.
+
+143
+00:10:32,300 --> 00:10:33,300
+It should be anyway.
+
+144
+00:10:33,300 --> 00:10:34,300
+It looks like it's not here.
+
+145
+00:10:34,300 --> 00:10:37,300
+Oh, I don't have very many from Cold Canyon.
+
+146
+00:10:37,300 --> 00:10:47,300
+Eagle Coney and Nova Mundi was known as Eagle Coney Quadramaculata for a long time.
+
+147
+00:10:47,300 --> 00:10:54,300
+And somebody did some DNA studies, a guy in Canada, and found out that we have two species,
+
+148
+00:10:54,300 --> 00:10:58,300
+neither one of which was Quadramaculata.
+
+149
+00:10:58,300 --> 00:11:06,300
+And all of them look practically identical if you look only at the pattern.
+
+150
+00:11:06,300 --> 00:11:15,300
+And the genitalia were eventually, illustrations of the genitalia were eventually posted online.
+
+151
+00:11:15,300 --> 00:11:19,300
+So I did quite a few dissections last year.
+
+152
+00:11:19,300 --> 00:11:27,300
+And it turned out that all that I dissected are Nova Mundi, which is what I've been recording them at.
+
+153
+00:11:27,300 --> 00:11:40,300
+But there's a possibility that this second species, the name of which isn't popping into my head right now, is also in the mix.
+
+154
+00:11:40,300 --> 00:11:42,300
+You're recording audio, right, Grace?
+
+155
+00:11:42,300 --> 00:11:43,300
+Yes.
+
+156
+00:11:43,300 --> 00:11:44,300
+Yes.
+
+157
+00:11:44,300 --> 00:11:54,300
+And whether this, the old name, Quadramaculata, is an old world species.
+
+158
+00:11:54,300 --> 00:11:59,300
+And these are probably new world species that nobody knows.
+
+159
+00:11:59,300 --> 00:12:07,300
+Why don't you take notes and I'll take care of Skipper.
+
+160
+00:12:07,300 --> 00:12:14,300
+So your analysis seems to show that it's increasing, but it had a very poor year this year.
+
+161
+00:12:14,300 --> 00:12:20,300
+No, actually the red means that even though we see an increase, it's just, it only looks that way because of collection.
+
+162
+00:12:20,300 --> 00:12:24,300
+This year seemed notable decline this year.
+
+163
+00:12:24,300 --> 00:12:25,300
+That's good.
+
+164
+00:12:25,300 --> 00:12:26,300
+Okay.
+
+165
+00:12:26,300 --> 00:12:27,300
+So we have to write down that.
+
+166
+00:12:27,300 --> 00:12:33,300
+So today was in line with what your model suggests.
+
+167
+00:12:33,300 --> 00:12:34,300
+That's promising.
+
+168
+00:12:34,300 --> 00:12:43,300
+Enophila viflava is an introduced species and it feeds on mold and so forth.
+
+169
+00:12:43,300 --> 00:12:54,300
+So if you have house plants and you get like leaf litter or even the potted lamps that have mold in them.
+
+170
+00:12:54,300 --> 00:12:59,300
+So you get this tiny moth flying around your house and it's almost always Enophila viflava.
+
+171
+00:12:59,300 --> 00:13:10,300
+And it's seen more often in houses than it is outdoors, but I get it fairly common outdoors.
+
+172
+00:13:10,300 --> 00:13:17,300
+But, you know, it's so small that it's a moth that most moth collectors would not, would ignore.
+
+173
+00:13:17,300 --> 00:13:23,300
+They might see it or they might not see it, but they'd ignore it because I can't spread that anyway.
+
+174
+00:13:23,300 --> 00:13:37,300
+You know, so Greg, for example, never reports it from his yard, but he brought one in once that somebody had found in the house and was worried that this was some kind of horrible species.
+
+175
+00:13:37,300 --> 00:13:42,300
+But at worst, it's probably eating mold on potted plants.
+
+176
+00:13:42,300 --> 00:13:55,300
+Opagona omoscopa disappeared all of a sudden about two or three years ago and you show it on an increase.
+
+177
+00:13:55,300 --> 00:13:58,300
+Well, it does look like it's declined in recent years.
+
+178
+00:13:58,300 --> 00:14:04,300
+But it totally disappeared after a high of 121 years, which is...
+
+179
+00:14:04,300 --> 00:14:11,300
+How are you getting these nonlinear patterns? Is it because you have additional variables in your model?
+
+180
+00:14:11,300 --> 00:14:16,300
+I don't think we can detect the nonlinear trends.
+
+181
+00:14:16,300 --> 00:14:20,300
+Oh, because you're... I'm sorry, John, we have to take a modeling detour.
+
+182
+00:14:20,300 --> 00:14:23,300
+That's one of the reasons why I was thinking about the splines, because...
+
+183
+00:14:23,300 --> 00:14:25,300
+Well, it shows that it's increasing, but...
+
+184
+00:14:25,300 --> 00:14:30,300
+Your model still predicts things really well, even when the trends are nonlinear. How is it doing that?
+
+185
+00:14:30,300 --> 00:14:37,300
+Well, you're analyzing the available data and it shows a trend, but the trend, all of a sudden, it just crashed and disappeared.
+
+186
+00:14:37,300 --> 00:14:41,300
+Do you know how it's doing that?
+
+187
+00:14:41,300 --> 00:14:42,300
+Um...
+
+188
+00:14:42,300 --> 00:14:43,300
+I would write down to look that up.
+
+189
+00:14:43,300 --> 00:14:44,300
+Yeah.
+
+190
+00:14:44,300 --> 00:14:49,300
+Like, how is your model predicting things so well if the only relationships we're allowing it to have are linear?
+
+191
+00:14:49,300 --> 00:14:54,300
+It might just be because you have covariance and then the output is a certain...
+
+192
+00:14:54,300 --> 00:14:58,300
+That would be my suspicion, but I don't fully know, so I'd have to look at that.
+
+193
+00:14:58,300 --> 00:15:04,300
+We're going to figure that out, because it does look like there's sort of a hump shape there.
+
+194
+00:15:04,300 --> 00:15:05,300
+Yeah.
+
+195
+00:15:05,300 --> 00:15:17,300
+Now, I know that when Felix Sperling was at Berkeley, he's a Canadian, and went back to Canada because he didn't like it here.
+
+196
+00:15:17,300 --> 00:15:21,300
+It was too expensive and too dangerous, he thought, to live in Berkeley.
+
+197
+00:15:21,300 --> 00:15:23,300
+He has a point.
+
+198
+00:15:23,300 --> 00:15:27,300
+He told me at the time that he was running a light on the balcony.
+
+199
+00:15:27,300 --> 00:15:32,300
+You know, he lived in a UC condo, a faculty condo.
+
+200
+00:15:32,300 --> 00:15:36,300
+And he told me that he was getting a lot of this smoth in Berkeley, too.
+
+201
+00:15:36,300 --> 00:15:41,300
+And I never got it at Cold Canyon, so it may be more of a domestic...
+
+202
+00:15:41,300 --> 00:15:44,300
+Do you think it's native or non-native? Do you know?
+
+203
+00:15:44,300 --> 00:15:47,300
+I don't think so, but I don't know for sure.
+
+204
+00:15:47,300 --> 00:15:49,300
+The problem with these...
+
+205
+00:15:49,300 --> 00:15:55,300
+This is kind of a scavenger and probably feeds on fungus or mold.
+
+206
+00:15:55,300 --> 00:16:08,300
+It's hard to know where they originated because they move around on any type of wood product or, you know, vegetable material.
+
+207
+00:16:08,300 --> 00:16:10,300
+They can eat pretty much anything, so yeah.
+
+208
+00:16:10,300 --> 00:16:12,300
+Yeah, okay.
+
+209
+00:16:12,300 --> 00:16:23,300
+Opagona species one is not for certain it's Opagona, but one of the people who identified Mothsbury,
+
+210
+00:16:23,300 --> 00:16:31,300
+and the one who's been unreliable, saw specimens that Berkeley had of this moth,
+
+211
+00:16:31,300 --> 00:16:37,300
+and it showed up in Berkeley about the same time as here, and said that that was an Opagona.
+
+212
+00:16:37,300 --> 00:16:50,300
+And it looks kind of like Opagona, and there's one that recently was introduced called the Banana Moth, and I don't know what the species is, but this could be the Banana Moth.
+
+213
+00:16:50,300 --> 00:16:55,300
+Why it's called the Banana Moth, I don't know, except that it might have been first discovered in...
+
+214
+00:16:55,300 --> 00:16:59,300
+It kind of looks like a banana.
+
+215
+00:16:59,300 --> 00:17:01,300
+That looks like a banana?
+
+216
+00:17:01,300 --> 00:17:02,300
+That's not...
+
+217
+00:17:02,300 --> 00:17:03,300
+That's not what it looks like.
+
+218
+00:17:03,300 --> 00:17:04,300
+Oh, I see.
+
+219
+00:17:04,300 --> 00:17:05,300
+Okay.
+
+220
+00:17:05,300 --> 00:17:07,300
+Is that more what it looks like?
+
+221
+00:17:07,300 --> 00:17:10,300
+No, you need to look at Opagona, the...
+
+222
+00:17:10,300 --> 00:17:11,300
+This one.
+
+223
+00:17:11,300 --> 00:17:12,300
+That's not what it looks like.
+
+224
+00:17:12,300 --> 00:17:14,300
+That's the one that it might be.
+
+225
+00:17:14,300 --> 00:17:15,300
+That doesn't look so much like that.
+
+226
+00:17:15,300 --> 00:17:20,300
+And Moth Photographers Group has some pictures of it.
+
+227
+00:17:20,300 --> 00:17:22,300
+It's kind of a...
+
+228
+00:17:22,300 --> 00:17:24,300
+It looks very different.
+
+229
+00:17:24,300 --> 00:17:36,300
+This one is quite variable in size, which is often the case with moths that are scavengers because food quality kind of comes and goes.
+
+230
+00:17:36,300 --> 00:17:37,300
+That's interesting.
+
+231
+00:17:37,300 --> 00:17:50,300
+So, for example, there's a tinea that Don Strong has been working at, and it gets into coyote scats and then goes down into the soil.
+
+232
+00:17:50,300 --> 00:18:05,300
+And I knew it from San Bruno Mountain where I collected owl pellets, and it also gets into owl pellets, so it eats keratinaceous substances.
+
+233
+00:18:05,300 --> 00:18:15,300
+And I had reared it in a bag for a long, long time, and over time it got smaller and smaller and smaller and smaller.
+
+234
+00:18:15,300 --> 00:18:20,300
+So, Jerry put that in his book after I made some comments.
+
+235
+00:18:20,300 --> 00:18:25,300
+Okay, so Opagona is probably Opagona.
+
+236
+00:18:25,300 --> 00:18:27,300
+It's a recent arrival.
+
+237
+00:18:27,300 --> 00:18:35,300
+It was in lower numbers this year than previous years.
+
+238
+00:18:35,300 --> 00:18:45,300
+You don't have the 2024 data, and I don't know whether you want it or not, but it's nearly complete now if you do want it.
+
+239
+00:18:45,300 --> 00:18:50,300
+I think we do want it, but we want it for maybe an update to the database.
+
+240
+00:18:50,300 --> 00:18:51,300
+Yeah.
+
+241
+00:18:51,300 --> 00:18:52,300
+Yeah.
+
+242
+00:18:52,300 --> 00:18:53,300
+You want it?
+
+243
+00:18:53,300 --> 00:18:54,300
+I'm sorry, I didn't hear.
+
+244
+00:18:54,300 --> 00:18:55,300
+As an update later on.
+
+245
+00:18:55,300 --> 00:18:56,300
+Okay.
+
+246
+00:18:56,300 --> 00:18:59,300
+I think for 2023 is where we stopped for our analysis.
+
+247
+00:18:59,300 --> 00:19:04,300
+Yeah, you don't have the 2024 data, so you couldn't have analyzed it.
+
+248
+00:19:04,300 --> 00:19:05,300
+Right.
+
+249
+00:19:05,300 --> 00:19:10,300
+But I have now dissected almost everything that I intend to dissect.
+
+250
+00:19:10,300 --> 00:19:18,300
+And I'm also dissecting some older material for confirmation because I didn't get around it.
+
+251
+00:19:18,300 --> 00:19:31,300
+That means that I have very few of the UFOs, you know, my UFO, that are still UFOs.
+
+252
+00:19:31,300 --> 00:19:32,300
+That's great.
+
+253
+00:19:32,300 --> 00:19:33,300
+Yeah.
+
+254
+00:19:33,300 --> 00:19:34,300
+It's still cheaper.
+
+255
+00:19:34,300 --> 00:19:35,300
+Most of the ones.
+
+256
+00:19:35,300 --> 00:19:36,300
+Yeah.
+
+257
+00:19:36,300 --> 00:19:41,300
+There are some that I have not yet integrated into the collection, but I'm almost through.
+
+258
+00:19:41,300 --> 00:19:43,300
+It's only like...
+
+259
+00:19:43,300 --> 00:19:44,300
+Yeah.
+
+260
+00:19:44,300 --> 00:19:45,300
+Yeah.
+
+261
+00:19:45,300 --> 00:19:46,300
+Orthonema obstipata.
+
+262
+00:19:46,300 --> 00:19:47,300
+Yeah.
+
+263
+00:19:47,300 --> 00:19:48,300
+Oh, you don't need any of that.
+
+264
+00:19:48,300 --> 00:19:51,300
+It's right there.
+
+265
+00:19:51,300 --> 00:19:56,300
+And another moth that we've previously discussed.
+
+266
+00:19:56,300 --> 00:19:59,300
+They have costa convexa centra stragaria.
+
+267
+00:19:59,300 --> 00:20:01,300
+They have one in Davis, too.
+
+268
+00:20:01,300 --> 00:20:07,300
+There's one form of orthonema that's very distinct from the others, but the other ones,
+
+269
+00:20:07,300 --> 00:20:11,300
+if you don't have them side by side, they're kind of hard to tell apart.
+
+270
+00:20:11,300 --> 00:20:13,300
+They were like, we have one in Davis, too.
+
+271
+00:20:13,300 --> 00:20:14,300
+And centra stragaria.
+
+272
+00:20:14,300 --> 00:20:23,300
+You know, Wagner looked at someone, he was visiting me on one of his visits, and he said
+
+273
+00:20:23,300 --> 00:20:28,300
+he didn't think it was centra stragaria, but I think there's just geographic variation.
+
+274
+00:20:28,300 --> 00:20:29,300
+Yes.
+
+275
+00:20:29,300 --> 00:20:36,300
+But it may turn out that that one turns out to be a different species than eastern ones.
+
+276
+00:20:36,300 --> 00:20:43,300
+And I think both of these are fairly widespread and probably native, but I don't know for sure.
+
+277
+00:20:43,300 --> 00:20:49,300
+Orthosia hibisca is a winter bath.
+
+278
+00:20:49,300 --> 00:20:56,300
+So the fact that there's more of them in the later years may be due to more collection dates in the later years.
+
+279
+00:20:56,300 --> 00:20:57,300
+Okay.
+
+280
+00:20:57,300 --> 00:20:59,300
+And we didn't identify a trend, so that's good.
+
+281
+00:20:59,300 --> 00:21:00,300
+We did in this one.
+
+282
+00:21:00,300 --> 00:21:01,300
+Really interesting.
+
+283
+00:21:01,300 --> 00:21:02,300
+Okay.
+
+284
+00:21:02,300 --> 00:21:15,300
+Orthosia in general, there's some species that are hard to tell apart from one another.
+
+285
+00:21:15,300 --> 00:21:33,300
+And the character which I've been using to differentiate a couple of these difficult species does not seem to hold up if the pictures posted on the internet are correctly identified.
+
+286
+00:21:33,300 --> 00:21:44,300
+So the problem is I don't have any genitalic drawings or illustrations or photographs to compare them to.
+
+287
+00:21:44,300 --> 00:21:54,300
+But that seems to be the most common orthosia in Davis.
+
+288
+00:21:54,300 --> 00:21:55,300
+Pyromyzen.
+
+289
+00:21:55,300 --> 00:21:56,300
+Pyromyzen.
+
+290
+00:21:56,300 --> 00:22:06,300
+Wagner told me recently that there was a monograph on pyro and all of the western species couldn't be differentiated from one another.
+
+291
+00:22:06,300 --> 00:22:07,300
+Did I skip some?
+
+292
+00:22:07,300 --> 00:22:08,300
+Yes.
+
+293
+00:22:08,300 --> 00:22:09,300
+Okay.
+
+294
+00:22:09,300 --> 00:22:11,300
+Okay, that's backtrack.
+
+295
+00:22:11,300 --> 00:22:15,300
+Per abogrotus formalis.
+
+296
+00:22:15,300 --> 00:22:21,300
+There's at least three species of per abogrotus in Davis.
+
+297
+00:22:21,300 --> 00:22:28,300
+Formalis, Insularis, and much rarer Cupididissima.
+
+298
+00:22:28,300 --> 00:22:38,300
+Per abogrotus formalis, as I mentioned before, looks a little bit like a delphagrotus indeterminata.
+
+299
+00:22:38,300 --> 00:22:52,300
+And before I realized that there was as many species as we have, I recorded everything as still a different species called Exerta Stigma.
+
+300
+00:22:52,300 --> 00:22:58,300
+And at that time it was in a different genus.
+
+301
+00:22:58,300 --> 00:23:10,300
+And Exerta Stigma is reported from around here and using the characters which says that, so ones that appear to be that species I've dissected.
+
+302
+00:23:10,300 --> 00:23:19,300
+And they've all turned out to be Formalis or Insularis.
+
+303
+00:23:19,300 --> 00:23:22,300
+So I don't think that species is here.
+
+304
+00:23:22,300 --> 00:23:24,300
+I think it's a coastal species.
+
+305
+00:23:24,300 --> 00:23:28,300
+It looks like they're doing better over time in Cold Canyon.
+
+306
+00:23:28,300 --> 00:23:31,300
+Is that, do you feel like that's consistent?
+
+307
+00:23:31,300 --> 00:23:33,300
+Could be, yeah.
+
+308
+00:23:33,300 --> 00:23:35,300
+I think it's a generalist.
+
+309
+00:23:35,300 --> 00:23:37,300
+I think they're native.
+
+310
+00:23:37,300 --> 00:23:42,300
+They do show up around the year, throughout the year.
+
+311
+00:23:42,300 --> 00:23:52,300
+We don't have data for the early years except for any specimens that I retained before I learned how to tell them apart.
+
+312
+00:23:52,300 --> 00:24:00,300
+Once I learned how to tell them apart, I went back and identified any of the specimens that I retained.
+
+313
+00:24:00,300 --> 00:24:09,300
+But those were mostly from Cold Canyon because I think by the time I was doing it at Davis, they were resolved but I'm not sure.
+
+314
+00:24:09,300 --> 00:24:18,300
+I don't remember when that monograph came out that enabled me to straighten things up.
+
+315
+00:24:18,300 --> 00:24:22,300
+Insularis can be confused.
+
+316
+00:24:22,300 --> 00:24:28,300
+Para abogrodus, adelphagrodus and abogrodus
+
+317
+00:24:28,300 --> 00:24:29,300
+All the grodi.
+
+318
+00:24:29,300 --> 00:24:32,300
+Are somewhat similar to one another.
+
+319
+00:24:32,300 --> 00:24:41,300
+And, you know, if you work with them for a long time and never leave, you can recognize them on sight.
+
+320
+00:24:41,300 --> 00:24:46,300
+But when you only look at them occasionally, it's hard.
+
+321
+00:24:46,300 --> 00:24:55,300
+So I do have dissected specimens of the species in those genera that I use as references.
+
+322
+00:24:55,300 --> 00:24:59,300
+And if I'm not clear which species it is, I'll dissect them.
+
+323
+00:24:59,300 --> 00:25:04,300
+Because the genitalia illustrate photographs that are available.
+
+324
+00:25:06,300 --> 00:25:08,300
+I'm going to start a new...
+
