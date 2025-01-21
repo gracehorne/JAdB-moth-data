@@ -1,0 +1,934 @@
+---
+title: "wrangle-data"
+format: html
+editor: visual
+---
+
+### Load in data
+
+Here, I load in all the required packages to memory. Then, I read in all the files in a directory and store them in a list.
+
+```{r load data}
+#| include: false
+
+library(tidyverse)
+library(readxl)
+library(sf)
+library(ClimateNAr)
+library(elevatr)
+library(withr)
+library(ncdf4)
+
+# define the function to load all .xlsx files in a folder and put them in a list
+load_xlsx_files <- function(directory) {
+  # get the list of all .xlsx files in the specified directory
+  file_list <- list.files(path = directory,
+                          pattern = "*.xlsx",
+                          full.names = TRUE)
+  # extract file names without directory and extension, and clean them
+  file_names <- str_replace_all(basename(file_list), 
+                                "\\.[xX][lL][sS][xX]$", "")
+  cleaned_names <- str_replace_all(file_names, "[^0-9]", "")
+  
+  # read each file and store the data in a list using purrr::map
+  data_list <- purrr::map(file_list, read_excel)
+  
+  # assign cleaned names to the list elements
+  names(data_list) <- cleaned_names
+  
+  # return the list of data frames
+  return(data_list)
+}
+
+# run function to load in data
+davis <- load_xlsx_files("../01_raw-data/davis/")
+stebs <- load_xlsx_files("../01_raw-data/stebs/")
+
+```
+
+### Wrangle data frames
+
+I wrangled the data matrix into observations by date (long format). I also added code to handle some of the idiosyncrasies in the spreadsheet format that caused errors when I tried to read it in.
+
+```{r wrangle data}
+
+# function to safely convert to numeric 
+safe_as_numeric <- function(x) {
+  # Helper function to convert individual values
+  convert_value <- function(val) {
+    # Special conversions
+    if (toupper(val) %in% c("S", "L", "I")) {
+      return(1)
+    }
+    
+    # Remove any non-numeric characters except decimal point and sign
+    cleaned <- gsub("[^0-9.-]", "", as.character(val))
+    
+    # Check if value is non-numeric after cleaning
+    if (cleaned == "" || is.na(cleaned)) {
+      return(NA)
+    }
+    
+    # Convert to numeric
+    as.numeric(cleaned)
+  }
+  
+  # Apply conversion
+  sapply(x, convert_value)
+}
+
+# function to fill NA values with the most recent non-NA value in a row
+fill_row <- function(row) {
+  non_na_value <- NA
+  for (i in 1:length(row)) {
+    if (!is.na(row[i])) {
+      non_na_value <- row[i]
+    } else {
+      row[i] <- non_na_value
+    }
+  }
+  return(row)
+}
+
+# updated wrangle_data function for davis
+wrangle_data_davis <- function(df, year) {
+  # convert to df
+  df <- df %>% as.data.frame()
+  
+  # remove the first row if there is a running total
+  if (!is.na(df[3, 8]) && df[3, 8] == "Adults") {
+    new_names <- ifelse(is.na(df[1, ]), paste0("...", seq_along(df[1, ])), df[1, ])
+    new_names <- make.names(new_names, unique = TRUE)
+    df <- setNames(df, new_names)
+    df <- df %>% slice(-1)
+  }
+  
+  # if night/month rows are flip-flopped
+  if (df[1, 10] %in% c("N", "D")) {
+    df[1, ] <- colnames(df) # colnames to first row
+    df <- df %>% # remove day time data
+      select(-which(str_detect(df[1, ], "D")))
+    df[1, ] <- df[1, ] %>% # ... to NA
+      str_replace(., "\\.\\.\\.", NA_character_) %>% as.list()
+  }
+  
+  # apply the function only to the first row
+  df[1, ] <- fill_row(as.vector(df[1, ]))
+  
+  # make a row for the dates
+  date_row <- df %>%
+    slice(c(1, 2)) %>%
+    mutate_all(~ paste(., collapse = " "))
+  
+  # add it in
+  df[1, ] <- date_row[1, ]
+  
+  # rename the columns as the first row
+  df <- df %>%
+    setNames(unlist(df[1, ]))
+  
+  # remove the last 4 columns
+  df <- df[, -c((ncol(df) - 3):ncol(df))]
+  
+  # remove columns 3 through 6, 8, and 9
+  df <- df %>%
+    select(-3:-6, -8, -9)
+  
+  # define new column names for the species columns
+  new_names <- c("hodges", "list", "verbatim_name")
+  
+  # small edits add up :)
+  df <- df %>%
+    # rename the species columns
+    rename_with(~ new_names, c(1, 2, 3)) %>%
+    # remove the first 2 rows using dplyr
+    slice(-(1:2)) %>%
+    # drop columns where "verbatim_name" is NA
+    drop_na(verbatim_name) %>%
+    # remove extra text
+    filter(
+      !verbatim_name == "Species:",
+      !verbatim_name == "species (total)",
+      !verbatim_name == "Individuals:",
+      !verbatim_name == "Off:",
+      !verbatim_name == "On:",
+      !verbatim_name == "Temp., deg. F.:",
+      !verbatim_name == "Hi Temp",
+      !verbatim_name == "Lo Temp"
+    ) %>%
+    # remove periods from names
+    rename_with(~ gsub("\\.", "", .), contains(".")) %>%
+    # combine the first two columns into a single column
+    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, ".", list))) %>%
+    # remove columns that were just used
+    select(-c(hodges, list)) %>%
+    # put hodges_list first
+    select(hodges_list, everything()) %>%
+    # pivot dates longer, now keeping count values
+    pivot_longer(
+      cols = -c(hodges_list, verbatim_name),
+      names_to = "date",
+      values_to = "count"
+    ) %>%
+    # Enhanced count handling to support alphanumeric values
+    mutate(count = case_when(
+      is.na(count) ~ 0,
+      count == "NA" ~ 0,
+      TRUE ~ safe_as_numeric(count)
+    )) %>%
+    # filter out rows with zero or NA count
+    filter(!is.na(count), count > 0) %>%
+    # fix dates
+    mutate(date = str_replace(date, "Sept", "Sep")) %>%
+    mutate(date = as.Date(paste(date, year), format = "%b %d %Y"))
+  
+  return(df)
+}
+
+# updated wrangle_data function for stebs
+wrangle_data_stebs <- function(df, year) {
+  # convert to df
+  df <- df %>% as.data.frame()
+  
+  # remove blank columns
+  df <- df %>%
+    select(where(~ {
+      if (is.numeric(.) || is.logical(.)) {
+        !all(is.na(.) | . == 0 | . == FALSE)
+      } else {
+        TRUE  # Keep non-numeric and non-logical columns
+      }
+    }))
+    
+  # apply the function only to the first row
+  df[1, ] <- fill_row(as.vector(df[1, ]))
+  
+  # make a row for the dates
+  date_row <- df %>%
+    slice(c(1, 2)) %>%
+    mutate_all(~ paste(., collapse = " "))
+  
+  # add it in
+  df[1, ] <- date_row[1, ]
+  
+  # remove daytime collection columns
+  df <- df %>%
+    select(-matches("D|NT|Trap|day"))
+  
+  # delete family column
+  if (df[3,3] == "ERIOCRANIIDAE" | df[4,3] == "ERIOCRANIIDAE") {
+    df <- df %>%
+    select(-3)   
+  }
+  
+  # remove columns 4 and 5
+  df <- df %>%
+    select(-4:-5)
+  
+  # remove the last 2 columns
+  df <- df[, -c((ncol(df) - 1):ncol(df))]
+  
+  # rename the columns as the first row
+  df <- df %>%
+    setNames(unlist(df[1, ]))
+  
+  # define new column names for the species columns
+  new_names <- c("hodges", "list", "verbatim_name")
+  
+  # small edits add up :)
+  df <- df %>%
+    # rename the species columns
+    rename_with(~ new_names, c(1, 2, 3)) %>%
+    # remove the first 2 rows using dplyr
+    slice(-(1:2)) %>%
+    # drop columns where "verbatim_name" is NA
+    drop_na(verbatim_name) %>%
+    # remove extra text
+    filter(!verbatim_name == "Species:",
+           !verbatim_name == "species (total)",
+           !verbatim_name == "Individuals:",
+           !verbatim_name == "Off:",
+           !verbatim_name == "On:",
+           !verbatim_name == "Temp., deg. F.:",
+           !verbatim_name == "Hi Temp",
+           !verbatim_name == "Lo Temp"
+           ) %>%
+    # remove periods from names
+    rename_with(~ gsub("\\.", "", .), contains(".")) %>%
+    # combine the first two columns into a single column
+    mutate(hodges_list = ifelse(is.na(list), hodges, paste0(hodges, ".", list))) %>%
+    # remove columns that were just used
+    select(-c(hodges, list)) %>%
+    # put hodges_list first
+    select(hodges_list, everything()) %>%
+    # pivot dates longer, now keeping count values
+    pivot_longer(
+      cols = -c(hodges_list, verbatim_name),
+      names_to = "date",
+      values_to = "count"
+    ) %>%
+    # Enhanced count handling to support alphanumeric values
+    mutate(count = case_when(
+      is.na(count) ~ 0,
+      count == "NA" ~ 0,
+      TRUE ~ safe_as_numeric(count)
+    )) %>%
+    # filter out rows with zero or NA count
+    filter(!is.na(count), count > 0) %>%
+    # fix dates
+    mutate(date = str_replace(date, "Sept", "Sep")) %>%
+    mutate(date = as.Date(paste(date, year), format = "%b %d %Y"))
+  
+  return(df)
+}
+
+# wrangle data
+davis_wrangled <- imap(davis, wrangle_data_davis) %>% 
+  list_rbind() %>% drop_na(date)
+stebs_wrangled <- imap(stebs, wrangle_data_stebs) %>% 
+  list_rbind() %>% drop_na(date)
+
+```
+
+### ALL NAMES
+
+This is John's latest iteration of a name-matching db.
+
+```{r link-across-sites}
+
+# load in all names excel sheet
+all_names <- read_excel("../01_raw-data/ALL NAMES.xlsx")
+
+# remove extraneous columns
+all_names <- all_names %>%
+  select(-c(3, 5, 6, 7, 9, 10), -(11:14), -(16:19))
+
+# vector of new names
+col_names <- c(
+  "hodges_list",
+  "p_no",
+  "favored_name",
+  "davis_formatted",
+  "davis_spreadsheet",
+  "stebs_formatted",
+  "stebsum_name",
+  "is_highlighted"
+)
+
+# rename
+names(all_names) <- col_names
+
+# remove the first 4 rows; remove if no favored name
+all_names <- all_names %>%
+  slice(-(1:4)) %>%
+  filter(!is.na(favored_name))
+
+# removals
+all_names <- all_names %>%
+  filter(favored_name != "Aglossa caprealis (Hübner)")
+
+
+```
+
+### Formatted "favored" names
+
+Double check that every observation has a "favored" name.
+
+```{r favored-names}
+
+# load in list of names
+preferred_names_stebs <- read_excel("../01_raw-data/formatted-names-GMH-v2.xlsx")
+
+preferred_names_stebs <- preferred_names_stebs %>%
+  # remove the 1st row
+  slice(-1) %>%
+  # combine the first and second columns
+  mutate(hodges_list = ifelse(!is.na(`...2`), 
+                              paste0(Hodges, ".", `...2`), 
+                              Hodges)) %>%
+  # remove columns used to make hodges_list
+  select(hodges_list, everything(), -Hodges, -`...2`)
+
+# vector of new names
+col_names <- c(
+  "hodges_list",
+  "p_no",
+  "verbatim_name",
+  "preferred_name",
+  "stebsum_name",
+  "old_name1",
+  "old_name2",
+  "old_name3",
+  "old_name4",
+  "old_name5" ,
+  "old_name6",
+  "old_name7",
+  "comments"
+)
+
+# rename
+names(preferred_names_stebs) <- col_names
+
+# remove hodges_list and p_no from preferred_names_stebs
+all_names_joined <- preferred_names_stebs %>%
+  select(-hodges_list, -p_no) %>%
+  rename(old_name9 = stebsum_name) %>%
+  full_join(all_names, by = c("preferred_name" = "favored_name"))
+
+# rename 2 columns and then reorder to preferred order
+all_names_joined <- all_names_joined %>%
+  rename(old_name8 = verbatim_name) %>%
+  select(hodges_list, p_no, preferred_name, davis_formatted,
+         davis_spreadsheet, stebs_formatted, stebsum_name,
+         old_name1, old_name2, old_name3, old_name4, old_name5,
+         old_name6, old_name7, old_name8, old_name9)
+
+# get unique names from stebs data
+unique_stebs <- stebs_wrangled %>% 
+  select(verbatim_name) %>% 
+  distinct()
+
+# get unique names from davis data
+unique_davis <- davis_wrangled %>% 
+  select(verbatim_name) %>% 
+  distinct()
+
+# merge unique names together
+unique_names <- rbind(unique_davis, unique_stebs) %>% distinct()
+
+# make a database with final columns and a list of old names
+all_names_db <- all_names_joined %>%
+  select(hodges_list, p_no, preferred_name) %>%
+  mutate(old_names = map(1:nrow(.), function(i) {
+    c(
+      all_names_joined$preferred_name[i],
+      all_names_joined$davis_formatted[i],
+      all_names_joined$davis_spreadsheet[i],
+      all_names_joined$stebs_formatted[i],
+      all_names_joined$stebsum_name[i],
+      all_names_joined$old_name1[i],
+      all_names_joined$old_name2[i],
+      all_names_joined$old_name3[i],
+      all_names_joined$old_name4[i],
+      all_names_joined$old_name5[i],
+      all_names_joined$old_name6[i],
+      all_names_joined$old_name7[i],
+      all_names_joined$old_name8[i],
+      all_names_joined$old_name9[i]
+    ) %>%
+      discard(is.na)
+  })) %>% distinct()
+
+# unnest the old_names column so that each old name is in its own row
+df_long <- all_names_db %>%
+  unnest(old_names)
+
+# join this long dataframe with the unique_names dataframe by old_name
+unique_names_with_preferred <- unique_names %>%
+  left_join(df_long, by = c("verbatim_name" = "old_names")) %>%
+  rename("database_name" = "verbatim_name") %>%
+  distinct() %>%
+  select(hodges_list, p_no, everything())
+
+```
+
+### Replace database names with preferred names
+
+```{r name-updates}
+
+# update names
+stebs_wrangled_updated <- stebs_wrangled %>%
+  # remove list number
+  select(-hodges_list) %>%
+  # left join with preferred names
+  left_join(., unique_names_with_preferred, by = join_by(verbatim_name == database_name)) %>%
+  # put them in order
+  select(hodges_list, p_no, preferred_name, date, verbatim_name, count) %>%
+  # drop observations w/o preferred_name
+  drop_na(preferred_name)
+
+# update names
+davis_wrangled_updated <- davis_wrangled %>%
+  # remove list number
+  select(-hodges_list) %>%
+  # left join with preferred names
+  left_join(., unique_names_with_preferred, by = join_by(verbatim_name == database_name)) %>%
+  # put them in order
+  select(hodges_list, p_no, preferred_name, date, verbatim_name, count) %>%
+  # drop observations w/o preferred_name
+  drop_na(preferred_name)
+
+
+```
+
+### ⚠️ Add John's confidence levels
+
+```{r john-species-confidence}
+
+
+```
+
+### Write raw observations
+
+```{r obs-data}
+
+# write data to file
+write_csv(davis_wrangled_updated, "../03_processed-data/davis-obs-complete_counts.csv")
+
+write_csv(stebs_wrangled_updated, "../03_processed-data/stebs-obs-complete_counts.csv")
+
+```
+
+### Calculate zero years for all species
+
+```{r zero-years}
+
+# make dataframe with preferred name and date only
+names_obs_stebs <- stebs_wrangled_updated %>%
+  select(preferred_name, date)
+
+names_obs_davis <- davis_wrangled_updated %>%
+  select(preferred_name, date)
+
+
+fill_missing_years <- function(df) {
+  # Convert date to year and count observations per species per year
+  yearly_counts <- df %>%
+    mutate(year = year(as.Date(date))) %>%
+    group_by(preferred_name, year) %>%
+    summarize(observations = n(), .groups = "drop")
+  
+  # Get the range of years
+  min_year <- min(yearly_counts$year)
+  max_year <- max(yearly_counts$year)
+  all_years <- min_year:max_year
+  
+  # Get unique preferred names
+  preferred_names <- unique(df$preferred_name)
+  
+  # Create a dataframe with all combinations of preferred_name and year
+  all_combinations <- expand.grid(preferred_name = preferred_names, year = all_years)
+  
+  # Merge with the yearly counts
+  result <- all_combinations %>%
+    left_join(yearly_counts, by = c("preferred_name", "year")) %>%
+    mutate(day_positives = ifelse(is.na(observations), 0, 1)) %>%
+    select(preferred_name, year, day_positives) %>%
+    arrange(preferred_name, year) %>%
+    rename(matched_name = preferred_name)
+  
+  return(result)
+}
+
+# Apply the function
+stebs_zeros <- fill_missing_years(names_obs_stebs) %>% 
+  filter(day_positives == 0)
+
+davis_zeros <- fill_missing_years(names_obs_davis) %>% 
+  filter(day_positives == 0)
+
+```
+
+### Match names to a backbone
+
+First, I made a list of names, then I exported that list so that I could run a command line script to process the data and tie it back to the GBIF and iNat taxonomy backbones. Then, I created a column based on the sort scores so that I am able to identify which "species" need to be manually checked.
+
+```{r name-match}
+
+# create a function to match names to a backbone
+get_names <- function(df, site) {
+
+  # get species names
+  taxa <- unique(df$preferred_name)
+  
+  # construct file name string
+  filename <- paste0("../01_raw-data/", site, "-names/", 
+                     deparse(substitute(df)), ".txt")
+  
+  # construct file output string
+  fileoutput <- paste0("../01_raw-data/", site, "-names/", 
+                       deparse(substitute(df)), "-output.csv")
+  
+  # write to a text file for use with names verifier
+  writeLines(taxa, filename)
+  
+  # parse names (prefer iNat (180) and GBIF (11))
+  system(paste("gnverifier", filename, ">", fileoutput, " -s '11, 180'"))
+  
+  # read in matched names
+  check_names <- read_csv(fileoutput)
+  
+  # select columns, rename, and join with obs data
+  names_df <- check_names %>%
+    select(SortScore, ScientificName, MatchedCanonical, 
+           TaxonId, DataSourceTitle, ClassificationPath) %>%
+    rename(sort_score = SortScore,
+           matched_name = ScientificName,
+           genus_species = MatchedCanonical,
+           taxon_id = TaxonId,
+           source = DataSourceTitle) %>%
+    # create a column for bad matches or no matches
+    mutate(manual_check = ifelse(sort_score < 9 | str_count(genus_species, "\\S+") < 2 | str_detect(matched_name, "\\?"), 1, 0),
+           family = str_match(ClassificationPath, "(?:[^|]*\\|){4}([^|]*)")[,2]) %>%
+    select(-ClassificationPath) %>%
+    right_join(., df, join_by(matched_name ==  preferred_name))
+  
+  return(names_df)
+}
+
+# run function on davis names
+davis_full <- get_names(davis_wrangled_updated, "davis")
+stebs_full <- get_names(stebs_wrangled_updated, "stebs")
+
+```
+
+### ⚠️ Add checklist number
+
+I joined the Moth Photographer's group checklist numbers to John's data.
+
+```{r pohl-checklist}
+#| warning: false
+
+# load in the checklist data
+checklist <- read_excel("../01_raw-data/MPG-Taxa_20240311.xlsx") %>%
+  rename(
+    p_no = `P No`,
+    genus_species = Genus_Species,
+    common_name = `Common Name`,
+    family = Family,
+    genus = Genus,
+    species = Species,
+    synonymy = Synonymy
+  ) %>%
+select(p_no, MONA, genus_species, common_name, 
+       family, genus, species, synonymy)
+
+# update the taxonomy
+
+# if genus_species from stebs_full is in the synonymy column (but not
+# necesarily exactly equal), then replace genus_species from the
+# data frame stebs_full with genus_species from the df checklist
+stebs_full <- stebs_full %>%
+  mutate(genus_species = case_when(
+    sapply(genus_species, function(gs) {
+      # Split the name into its components
+      parts <- str_split(gs, " ")[[1]]
+      # Create patterns for both binomial and trinomial matches
+      patterns <- c(paste0("\\b", paste(parts[1:2], collapse = " "), "\\b"),
+                    if (length(parts) > 2)
+                      paste0("\\b", paste(parts[1:3], collapse = " "), "\\b")
+                    else
+                      NULL)
+      # Check if any pattern matches
+      any(sapply(patterns, function(pat)
+        any(str_detect(
+          checklist$synonymy, pat
+        ))))
+    }) ~
+      sapply(genus_species, function(gs) {
+        parts <- str_split(gs, " ")[[1]]
+        patterns <- c(paste0("\\b", paste(parts[1:2], collapse = " "), "\\b"),
+                      if (length(parts) > 2)
+                        paste0("\\b", paste(parts[1:3], collapse = " "), "\\b")
+                      else
+                        NULL)
+        for (pat in patterns) {
+          match_index <- which(str_detect(checklist$synonymy, pat))
+          if (length(match_index) > 0)
+            return(checklist$genus_species[match_index[1]])
+        }
+        return(gs)
+      }),
+    TRUE ~ genus_species
+  ))
+
+# join the datasets together
+davis_full <- left_join(davis_full, checklist)
+stebs_full <- left_join(stebs_full, checklist)
+
+```
+
+### Terraclimate data
+
+I scraped the data from terraclimate for Davis and Cold Canyon locations between 1989 and 2023. I then put the data is a list called `dat` with sublists for Davis and Cold Canyon.
+
+```{r terraclimate}
+
+# make a df with dates
+d1 <- as.Date("19580101", "%Y%m%d") # start date
+d2 <- as.Date("20231231", "%Y%m%d") # end date
+
+# fill in dates between
+dat <- format(seq(d1, d2, by = "month"), "%m %Y") %>% 
+  as_tibble() %>%
+  separate(value, into = c("month", "year"), sep = " ")
+
+# list for davis and stebs with all dates
+dat <- list("davis" = dat, "stebs" = dat)
+
+# for loop for both sites to get data
+for (site in c("davis", "stebs")) {
+  
+  temp_dat = tibble(.rows = 792) # must equal number of months in dataset
+  
+  if (site == "davis") {
+    x = c(-121.78, 38.5569) # Davis long, lat
+  } else if (site == "stebs") {
+    x = c(-122.0972, 38.51) # Stebs long, lat
+  }
+  
+  # gather all variables of interest
+for (var in c("tmax", "tmin", "ppt")) {
+  baseurlagg <-
+    paste0(
+      paste0(
+        "http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_terraclimate_",
+        var
+      ),
+      "_1958_CurrentYear_GLOBE.nc"
+    )
+  
+  nc <- nc_open(baseurlagg)
+  lon <- ncvar_get(nc, "lon")
+  lat <- ncvar_get(nc, "lat")
+  flat = match(abs(lat - x[2]) < 1 / 48, 1)
+  latindex = which(flat %in% 1)
+  flon = match(abs(lon - x[1]) < 1 / 48, 1)
+  lonindex = which(flon %in% 1)
+  start <- c(lonindex, latindex, 1)
+  count <- c(1, 1, -1)
+  
+  # read in the full period of record using aggregated files
+  data = as.numeric(ncvar_get(nc, varid = var, start = start, count)) %>%
+    as_tibble_col(., column_name = var)
+  temp_dat = temp_dat %>% add_column(data)
+  
+}
+  temp_dat = temp_dat %>% mutate(dataset = site)
+  dat[[site]] = cbind(temp_dat, dat[[site]])
+}
+
+TerraClimate <- dat %>% map_dfr(~ as_tibble(.)) %>% filter(year >= 1989 & year < 2024) %>%
+  mutate(source = "terraclimate",
+         month = as.numeric(month),
+         year = as.numeric(year))
+
+```
+
+### Format seasonal weather data
+
+Here, I summarize the weather data by season instead of month:
+
+-   First, I need to make a new column for `water_year`. For example, water year 1998 includes September through December of calendar year 1997
+
+-   Next, I need to group variables by season. Fall (suffix = `_at`) = months 9, 10, 11, winter (`_wt`) = 12, 1, 2, spring (`_sp`) = 3, 4, 5, and summer (`_sm`) = 6, 7, 8.
+
+```{r seasonal-weather}
+
+# function to assign season based on month
+get_season <- function(month) {
+  case_when(
+    month %in% c(9, 10, 11) ~ "at",
+    month %in% c(12, 1, 2) ~ "wt",
+    month %in% c(3, 4, 5) ~ "sp",
+    month %in% c(6, 7, 8) ~ "sm"
+  )
+}
+
+# create water_year and season columns, remove month column
+# set water year column (September to August)
+TerraClimate <- TerraClimate %>%
+  mutate(
+    water_year = ifelse(month %in% c(9, 10, 11, 12), year - 1, year),
+    season = get_season(month)
+  ) %>%
+  select(-month)
+
+# weather data per year
+weather <- TerraClimate %>%
+  group_by(season, dataset, year) %>%
+  summarise(
+    tmin = mean(tmin, na.rm = TRUE),
+    tmax = mean(tmax, na.rm = TRUE),
+    ppt = sum(ppt, na.rm = TRUE)
+  )
+
+# make into wider format
+weather <- weather %>%
+  # pivot the data longer first
+  pivot_longer(
+    cols = c(tmin, tmax, ppt),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  # now create the new column names
+  mutate(new_col = paste(variable, season, sep = "_")) %>%
+  # pivot wider to get the desired format
+  pivot_wider(
+    id_cols = c(dataset, year),
+    names_from = new_col,
+    values_from = value
+  )
+
+# join weather data to observation data
+stebs_full <- stebs_full %>%
+  mutate(month = month(date), 
+         year = year(date), 
+         season = get_season(month)) %>%
+  left_join(weather %>% filter(dataset == "stebs"), by = c("year"))
+
+davis_full <- davis_full %>%
+  mutate(month = month(date), 
+         year = year(date), 
+         season = get_season(month)) %>%
+  left_join(weather %>% filter(dataset == "davis"), by = c("year"))
+  
+```
+
+### Calculate adjusted FDPs
+
+```{r fdps}
+
+calculate_FDP <- function(data, zeros_data) {
+  require(dplyr)
+  require(lubridate)
+  
+  # convert date to year and day of year (DOY)
+  data <- data %>%
+    mutate(year = year(date), 
+           DOY = yday(date))
+  
+  # calculate day_positives and collection_events
+  day_positives <- data %>%
+    group_by(matched_name, year) %>%
+    summarise(day_positives = n(), .groups = 'drop') %>%
+    rbind(zeros_data)
+  
+  collection_events <- data %>%
+    group_by(year) %>%
+    summarise(collection_events = n_distinct(date), .groups = 'drop')
+  
+  # calculate flight window for each species
+  flight_window <- data %>%
+    group_by(matched_name) %>%
+    summarise(
+      flight_min = min(DOY),
+      flight_max = max(DOY),
+      .groups = 'drop'
+    )
+  
+  # get all unique date-year combinations
+  all_collection_dates <- data %>%
+    distinct(date, year) %>%
+    mutate(DOY = yday(date))
+  
+  # calculate adj_collection_events - modified approach
+  adj_collection_events <- all_collection_dates %>%
+    # create a row for each species-date combination
+    cross_join(flight_window) %>%
+    # keep only dates within flight window
+    filter(DOY >= flight_min, DOY <= flight_max) %>%
+    # count days within window for each species-year
+    group_by(matched_name, year) %>%
+    summarise(adj_collection_events = n(), .groups = 'drop')
+  
+  # combine all results
+  result <- day_positives %>%
+    left_join(collection_events, by = "year") %>%
+    mutate(day_negatives = collection_events - day_positives) %>%
+    left_join(flight_window, by = "matched_name") %>%
+    left_join(adj_collection_events, by = c("matched_name", "year"))
+  
+  # merge results with original data
+  data <- data %>%
+    select(-DOY) %>%
+    left_join(result, by = c("matched_name", "year"))
+  
+  return(data)
+}
+
+# List of dataframes to iterate over
+data_list <- list(
+  stebs = stebs_full,
+  davis = davis_full
+)
+
+# List of corresponding zeros dataframes
+zeros_list <- list(
+  stebs = stebs_zeros,
+  davis = davis_zeros
+)
+
+# Apply the function to each dataframe in the list
+results <- purrr::map2(data_list, zeros_list, calculate_FDP)
+
+# Flatten the list by appending data frames and create a new column based on list names
+full_data <- purrr::map2_dfr(results, names(results), ~ mutate(.x, dataset = .y))
+
+```
+
+### Add in pest, fire, trail, and SST data
+
+At this juncture, I only want to know if a species is a pest or not. So, I will create a list of all species in the pest data frame. If a binomial is in it, then it will receive a 1 in the column `any_pest` if not it will receive a 0. Trail and fire need only to be joined to the Cold Canyon data.
+
+```{r predictors}
+
+# get fire years 
+fire_predictor <- read_csv("../03_processed-data/predictors/fire_predictor.csv")
+
+# get trail years
+trail_predictor <- read_csv("../03_processed-data/predictors/trail_predictor.csv")
+
+# get SST predictor
+SST_predictor <- read_csv("../03_processed-data/predictors/meiv2.csv")
+
+# get average SST per year and pivot longer
+SST_predictor <- SST_predictor %>%
+  pivot_longer(everything(), names_to = "year", values_to = "value") %>%
+  group_by(year) %>%
+  summarize(SST = mean(value)) %>%
+  mutate(year = as.numeric(year))
+
+# join fire and trail predictors to stebs data
+# filter for dataset == "stebs"
+stebs_data <- full_data %>%
+  filter(dataset == "stebs")
+
+# perform the joins only for the filtered data
+stebs_data <- stebs_data %>%
+  left_join(fire_predictor) %>%
+  left_join(trail_predictor)  
+
+# combine with the original data, keeping the rows where dataset != "stebs"
+full_data <- full_data %>%
+  filter(dataset != "stebs") %>%
+  bind_rows(stebs_data)
+
+# load pest data
+pest_predictor <- read_csv("../03_processed-data/predictors/pest_status.csv")
+
+# reshape the dataframe to long format
+long_pest_predictor <- pest_predictor %>%
+  pivot_longer(cols = everything(), names_to = "crop", values_to = "presence")
+
+# get unique pest species
+unique_pests <- unique(long_pest_predictor[[2]])  # The first column name might vary
+
+# add pest status to full df
+full_data  <- full_data %>%
+  mutate(any_pest = ifelse(genus_species %in% unique_pests & !is.na(genus_species), 1, 0))
+
+# add SST to full data
+full_data <- full_data %>%
+  left_join(SST_predictor)
+
+```
+
+### Write final dataset
+
+```{r}
+
+# write data to file
+write_csv(full_data, "../03_processed-data/full_data_counts.csv")
+
+```

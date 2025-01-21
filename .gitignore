@@ -3,3 +3,5 @@
 .Rproj.user
 .DS_Store
 /04_audio/raw-audio-files
+.DS_Store
+02_scripts/.DS_Store
